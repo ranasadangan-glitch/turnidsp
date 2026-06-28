@@ -213,6 +213,11 @@ table.cov input{width:40px;border:none;text-align:center;background:var(--amber-
 .legq-grid button small{font-weight:400;font-size:.64rem;opacity:.8}
 @media(max-width:600px){:root{font-size:14px}th.day{min-width:46px}td.cell{min-width:46px}.c-name{min-width:120px;max-width:140px}.field2{grid-template-columns:1fr}}
 
+/* Loading overlay spin animation */
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+/* DB sync status colors in save state */
+#saveState{transition:color .3s;}
+
 /* ═══════════════════════════════════════════════════
    SCHEDULER UX UPGRADE  – slide panel, D&D, shortcuts
    ═══════════════════════════════════════════════════ */
@@ -787,8 +792,23 @@ const isWend=(m,d)=>{const g=dow(m,d);return g===0||g===6;};
 const isoWeek=(m,d)=>{const dt=new Date(m+"-"+String(d).padStart(2,"0"));const t=new Date(dt);t.setDate(t.getDate()+4-(t.getDay()||7));const y0=new Date(t.getFullYear(),0,1);return Math.ceil((((t-y0)/864e5)+1)/7);};
 function monthWeeks(){const days=daysInMonth(YM),map={},order=[];for(let d=1;d<=days;d++){const w=isoWeek(YM,d);if(!(w in map)){map[w]=[];order.push(w);}map[w].push(d);}return order.map(w=>({week:w,days:map[w]}));}
 function blankState(){return{meta:{month:YM,app:"TurniDSP",v:4,adminPin:localStorage.getItem("turniDSP_pin")||"1234"},drivers:[],schedule:{},forecast:{},config:loadGlobalConfig()};}
-function loadGlobalConfig(){const g=localStorage.getItem("turniDSP_config");if(g){try{const c=JSON.parse(g);if(!c.filiali)c.filiali=DEF_FILIALI.slice();return c;}catch(e){}}return defaultConfig();}
-function saveConfig(){localStorage.setItem("turniDSP_config",JSON.stringify(state.config));dirty();}
+function loadGlobalConfig(){
+  /* Try localStorage as a fast-start cache; config will be overwritten from DB after loadMonthFromDB */
+  const g=localStorage.getItem("turniDSP_config");
+  if(g){try{const c=JSON.parse(g);if(!c.filiali)c.filiali=DEF_FILIALI.slice();return c;}catch(e){}}
+  return defaultConfig();
+}
+function saveConfig(){
+  /* Config is saved to DB via saveMonthToDB (which includes state.config in the bulk push).
+     We keep a localStorage copy only as fallback for offline mode. */
+  dirty();
+  if(DB_SYNC){
+    const branch=teamFiliale||(filiali()[0]||"DLO1");
+    TurniApi.schedulerImportConfig(branch,state.config).catch(e=>console.warn("[config save]",e.message));
+  }
+  /* Offline fallback */
+  try{localStorage.setItem("turniDSP_config",JSON.stringify(state.config));}catch(_){}
+}
 const filiali=()=>CFG().filiali||[];
 function filDetail(f){if(!CFG().filDetails)CFG().filDetails={};const dt=CFG().filDetails[f]||(CFG().filDetails[f]={park:"",addr:"",conv:""});if(!Array.isArray(dt.parks)){dt.parks=[];if(dt.park||dt.addr||dt.conv)dt.parks.push({name:dt.park||"Parcheggio",addr:dt.addr||"",time:dt.conv||""});}return dt;}
 function allParkNames(){const s=new Set();filiali().forEach(f=>filDetail(f).parks.forEach(p=>{if(p.name)s.add(p.name);}));return[...s];}
@@ -808,14 +828,135 @@ const SEED_DRIVERS=[{id:1,cognome:"Abbas",nome:"Tahir Muhammad",filiale:"DLO7",s
 const SEED_SCHED={1:["SameB","","SameB","SameB","SameB","SameB","SameB","OFF","SameB","SameB","SameBC","","SameBC","SameBC","","","","SameBC","","SameBC","SameBC","","","","SameBC","","SameBC","SameBC","",""],2:["SameAE","","SameAE","SameAE","SameAE","","","SameAE","SameAE","SameA","SameAE","SameA","","","SameA","","SameA","SameA","SameA","SameA","SameA","SameA","","SameA","SameA","SameA","SameA","SameA","SameA",""],3:["MMA","MM","MM","MM","OFF","OFF","SameAE","MMA","","MMA","MM","OFF","","","MM","","MM","MM","","","","MM","","MM","MM","","","","MM",""],4:["","M","M","M","M","","","","M","M","M","M","OFF","","","SameBC","SameBC","SameBC","SameBC","","","","SameBC","SameBC","SameBC","SameBC","","","","SameBC"]};
 const SEED_FC={"DLO1_NEXT":[22,32,40,42,42,25,13,29,24,27,26,24,21,14,26,22,28,27,28,22,11,27,19,37,41,36,26,26,62,51],"DLO1_MM_NEXT":[22,22,22,22,22,7,7,22,22,22,22,22,7,7,22,22,22,22,22,7,7,22,22,22,22,22,7,7,22,22],"DLO1_SAMEB":[3,0,3,3,3,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"DLO1_MM_SAMEB":[10,0,10,10,10,0,0,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"SAMEA":[43,28,45,45,45,23,16,46,40,44,33,47,19,17,43,41,42,34,47,19,17,49,43,55,55,55,35,25,56,50],"SAMEE":[35,25,35,35,35,21,18,34,34,33,34,30,15,18,33,35,33,33,31,15,28,34,41,37,50,50,20,29,38,39],"SAMEB":[25,15,25,25,25,13,11,22,22,22,22,22,5,7,18,21,20,18,22,4,8,21,25,25,25,25,5,12,20,21],"SAMEC":[25,15,25,25,25,13,11,22,9,9,8,9,1,3,10,10,10,9,10,1,4,10,12,11,11,11,5,14,20,21],"MM_SAMEA":[15,15,15,15,15,10,10,15,15,15,15,15,10,10,15,15,15,15,15,10,10,15,15,15,15,15,10,10,15,15],"MM_SAMEE":[9,9,9,9,9,7,7,9,9,9,9,9,7,7,9,9,9,9,9,7,7,9,9,9,9,9,7,7,9,9],"MM_SAMEB":[10,0,10,10,10,0,0,10,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7],"MM_SAMEC":[10,0,10,10,10,0,0,10,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]};
 
-function loadMonth(){const raw=localStorage.getItem(lsKey(YM));if(raw){try{state=JSON.parse(raw);migrate();return;}catch(e){}}state=blankState();if(YM==="2026-06"){state.drivers=JSON.parse(JSON.stringify(SEED_DRIVERS));for(const[id,arr]of Object.entries(SEED_SCHED)){state.schedule[id]={};arr.forEach((c,i)=>{if(c)state.schedule[id][i+1]=c;});}for(const[k,arr]of Object.entries(SEED_FC)){state.forecast[k]={};arr.forEach((v,i)=>state.forecast[k][i+1]=v);}}saveAll();if(DB_SYNC){const br=teamFiliale||(filiali()[0]||"DLO1");loadMonthFromDB(YM,br).then(ok=>{if(ok){migrate();refreshAll();}});}}
+function loadMonth(){
+  /* ═══ DB-FIRST: PostgreSQL is the source of truth ═══
+     1. Parse any cached local state so the page renders immediately (stale is OK for a few ms)
+     2. Always fetch from DB when authenticated — DB wins, localStorage is just a render cache
+     3. If DB is unreachable, fall back gracefully to local cache (offline mode)            */
+  const raw=localStorage.getItem(lsKey(YM));
+  if(raw){try{state=JSON.parse(raw);migrate();}catch(e){state=blankState();}}else{state=blankState();}
+  if(DB_SYNC){
+    const br=teamFiliale||(filiali()[0]||"DLO1");
+    showLoadingOverlay(true);
+    loadMonthFromDB(YM,br).then(ok=>{
+      showLoadingOverlay(false);
+      if(ok){migrate();refreshAll();}
+      else{
+        /* DB returned nothing for this month; if we have seed data for 2026-06 push it */
+        if(YM==="2026-06"&&!state.drivers.length){
+          state.drivers=JSON.parse(JSON.stringify(SEED_DRIVERS));
+          for(const[id,arr]of Object.entries(SEED_SCHED)){state.schedule[id]={};arr.forEach((c,i)=>{if(c)state.schedule[id][i+1]=c;});}
+          for(const[k,arr]of Object.entries(SEED_FC)){state.forecast[k]={};arr.forEach((v,i)=>state.forecast[k][i+1]=v);}
+        }
+        migrate();refreshAll();
+        /* Push local data to DB on first access for this month */
+        if(state.drivers.length)saveMonthToDB();
+      }
+    }).catch(()=>{showLoadingOverlay(false);migrate();refreshAll();});
+  }else{
+    /* Offline/no-auth: render from local cache or seed data */
+    if(YM==="2026-06"&&!state.drivers.length){
+      state.drivers=JSON.parse(JSON.stringify(SEED_DRIVERS));
+      for(const[id,arr]of Object.entries(SEED_SCHED)){state.schedule[id]={};arr.forEach((c,i)=>{if(c)state.schedule[id][i+1]=c;});}
+      for(const[k,arr]of Object.entries(SEED_FC)){state.forecast[k]={};arr.forEach((v,i)=>state.forecast[k][i+1]=v);}
+    }
+    migrate();refreshAll();
+  }
+}
 function migrate(){if(!state.meta)state.meta={};if(!state.log)state.log=[];if(!state.config)state.config=loadGlobalConfig();if(!state.config.filDetails)state.config.filDetails={};["groups","codes","contracts","services","counters","filiali","users","serviceTypes","customCounters"].forEach(k=>{if(!state.config[k])state.config[k]=defaultConfig()[k];});state.config.services.forEach(s=>{if(!Array.isArray(s.filiali))s.filiali=[];});(state.config.users||[]).forEach(u=>{if(!Array.isArray(u.filiali))u.filiali=u.filiale?[u.filiale]:(filiali().length?[filiali()[0]]:[]);});state.drivers.forEach(d=>{if(!d.status)d.status="active";if(!("ctrType"in d))d.ctrType="indeterminato";if(!("expiry"in d))d.expiry=null;if(!Array.isArray(d.workDays))d.workDays=(contracts().find(c=>c.code===d.contratto)||{}).defDays||[1,2,3,4,5];if(!d.defaultCode)d.defaultCode=defCode(d.service);if(!d.filiale)d.filiale=filiali()[0]||"DLO1";if(!("transporterId"in d))d.transporterId="";if(!("device"in d))d.device="";if(!("hireDate"in d))d.hireDate="";});}
 /* ---- DB sync (write-through: localStorage cache + async DB save) ---- */
 const DB_SYNC=!!(typeof TurniApi!=="undefined"&&TurniApi.isLoggedIn&&TurniApi.isLoggedIn());let dbSyncTimer=null;
-async function loadMonthFromDB(ym,branch){try{const data=await TurniApi.schedulerMonth(ym,branch);if(data&&data.meta&&data.meta.source==="postgresql"){if(data.drivers&&data.drivers.length)state.drivers=data.drivers.map(d=>({id:d.id,cognome:d.cognome,nome:d.nome,filiale:d.filiale,service:d.service,contratto:d.contratto,ctrType:d.ctr_type||"indeterminato",expiry:d.expiry_date||null,workDays:d.work_days||[1,2,3,4,5],defaultCode:d.default_code,status:d.status,transporterId:d.transporter_id||"",device:d.device||"",hireDate:d.hire_date||""}));if(data.schedule)state.schedule=data.schedule;if(data.forecast&&Object.keys(data.forecast).length)state.forecast=data.forecast;if(data.config&&Object.keys(data.config).length)state.config=Object.assign(state.config||{},data.config);localStorage.setItem(lsKey(YM),JSON.stringify(state));return true;}}catch(e){console.warn("[scheduler] DB load:",e.message);}return false;}
-async function saveMonthToDB(){if(!DB_SYNC)return;const branch=teamFiliale||(filiali()[0]||"DLO1");try{const ci=[];for(const[rawId,days]of Object.entries(state.schedule||{})){const d=state.drivers.find(x=>String(x.id)===String(rawId));for(const[day,code]of Object.entries(days||{})){if(code)ci.push({local_driver_id:d?d.id:+rawId,day:+day,shift_code:code});}}const fi=[];for(const[svcKey,days]of Object.entries(state.forecast||{})){for(const[day,qty]of Object.entries(days||{})){fi.push({service_key:svcKey,day:+day,qty:+qty||0});}}await Promise.all([ci.length?TurniApi.schedulerBulkEntries(YM,branch,ci):Promise.resolve(),fi.length?TurniApi.schedulerBulkForecasts(YM,branch,fi):Promise.resolve(),TurniApi.schedulerImportDrivers(state.drivers||[])]);const el=document.getElementById("saveState");if(el)el.textContent="DB "+new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});}catch(e){console.warn("[DB]",e.message);const el=document.getElementById("saveState");if(el)el.textContent="locale (DB offline)";}}
-let saveTimer=null;function saveAll(manual){localStorage.setItem(lsKey(YM),JSON.stringify(state));const ts=new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});document.getElementById("saveState").textContent="salvato "+ts+(DB_SYNC?" ↑DB":" (locale)");if(manual)toast(DB_SYNC?"Salvato in database":"Dati salvati in locale");if(DB_SYNC){clearTimeout(dbSyncTimer);dbSyncTimer=setTimeout(saveMonthToDB,1200);}}
+async function loadMonthFromDB(ym,branch){
+  try{
+    const data=await TurniApi.schedulerMonth(ym,branch);
+    if(data&&data.meta&&data.meta.source==="postgresql"){
+      if(data.drivers&&data.drivers.length)
+        state.drivers=data.drivers.map(d=>({id:d.id,cognome:d.cognome,nome:d.nome,filiale:d.filiale,service:d.service,contratto:d.contratto,ctrType:d.ctr_type||"indeterminato",expiry:d.expiry_date||null,workDays:d.work_days||[1,2,3,4,5],defaultCode:d.default_code,status:d.status,transporterId:d.transporter_id||"",device:d.device||"",hireDate:d.hire_date||""}));
+      if(data.schedule)state.schedule=data.schedule;
+      if(data.forecast&&Object.keys(data.forecast).length)state.forecast=data.forecast;
+      if(data.config&&Object.keys(data.config).length)state.config=Object.assign(state.config||{},data.config);
+      /* Update local cache (render cache only — not source of truth) */
+      try{localStorage.setItem(lsKey(YM),JSON.stringify(state));}catch(_){}
+      return true;
+    }
+  }catch(e){console.warn("[scheduler] DB load:",e.message);}
+  return false;
+}
+async function saveMonthToDB(){
+  if(!DB_SYNC)return;
+  const branch=teamFiliale||(filiali()[0]||"DLO1");
+  setSaveState("saving");
+  try{
+    const ci=[];
+    for(const[rawId,days]of Object.entries(state.schedule||{})){
+      const d=state.drivers.find(x=>String(x.id)===String(rawId));
+      for(const[day,code]of Object.entries(days||{})){
+        if(code)ci.push({local_driver_id:d?d.id:+rawId,day:+day,shift_code:code});
+      }
+    }
+    const fi=[];
+    for(const[svcKey,days]of Object.entries(state.forecast||{})){
+      for(const[day,qty]of Object.entries(days||{})){fi.push({service_key:svcKey,day:+day,qty:+qty||0});}
+    }
+    await Promise.all([
+      ci.length?TurniApi.schedulerBulkEntries(YM,branch,ci):Promise.resolve(),
+      fi.length?TurniApi.schedulerBulkForecasts(YM,branch,fi):Promise.resolve(),
+      TurniApi.schedulerImportDrivers(state.drivers||[]),
+    ]);
+    setSaveState("saved");
+    /* Update local render cache after successful DB write */
+    try{localStorage.setItem(lsKey(YM),JSON.stringify(state));}catch(_){}
+  }catch(e){
+    console.warn("[DB]",e.message);
+    setSaveState("error");
+  }
+}
+let saveTimer=null;
+function saveAll(manual){
+  /* ═══ DB-FIRST: localStorage is NOT the source of truth ═══
+     - We do NOT write to localStorage on every save — the DB is authoritative
+     - setSaveState provides the UI feedback
+     - saveMonthToDB handles the actual DB write (debounced)            */
+  const ts=new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+  setSaveState(DB_SYNC?"queued":"local");
+  if(manual)toast(DB_SYNC?"Salvataggio in corso…":"Dati salvati in locale");
+  if(DB_SYNC){clearTimeout(dbSyncTimer);dbSyncTimer=setTimeout(saveMonthToDB,1200);}
+  else{
+    /* Offline fallback: write to localStorage only when no DB */
+    try{localStorage.setItem(lsKey(YM),JSON.stringify(state));}catch(_){}
+    document.getElementById("saveState").textContent="salvato "+ts+" (locale)";
+  }
+}
 function dirty(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveAll(),400);}
+
+/* ── Save state UI helpers ──────────────────────────────────── */
+let _saveStateTimer=null;
+function setSaveState(s){
+  const el=document.getElementById("saveState");
+  if(!el)return;
+  clearTimeout(_saveStateTimer);
+  if(s==="saving"){el.textContent="⏳ salvataggio…";el.style.color="var(--warn)";}
+  else if(s==="saved"){el.textContent="✓ DB salvato "+new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});el.style.color="var(--ok)";_saveStateTimer=setTimeout(()=>{el.textContent="";el.style.color="";},3000);}
+  else if(s==="queued"){el.textContent="⏳ in coda…";el.style.color="var(--muted)";}
+  else if(s==="local"){el.textContent="💾 locale";el.style.color="var(--muted)";}
+  else if(s==="error"){el.textContent="✗ errore DB";el.style.color="var(--bad)";}
+}
+
+/* Loading overlay for async DB fetches */
+let _loadOverlayTimer=null;
+function showLoadingOverlay(show){
+  let ov=document.getElementById("dbLoadOverlay");
+  if(show){
+    if(!ov){
+      ov=document.createElement("div");ov.id="dbLoadOverlay";
+      ov.style.cssText="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 20px;font-size:.85rem;font-weight:600;color:var(--pri);box-shadow:var(--shadow-lg);z-index:400;display:flex;align-items:center;gap:8px";
+      ov.innerHTML="<span style='animation:spin 1s linear infinite;display:inline-block'>⟳</span> Caricamento da database…";
+      document.body.appendChild(ov);
+    }
+  }else{
+    if(ov)ov.remove();
+  }
+}
 function actorName(){if(isAdmin())return"Admin";if(teamLocked&&currentUser)return currentUser;return"Team "+(teamFiliale||"");}
 function logAction(a){if(!state.log)state.log=[];state.log.push({t:new Date().toISOString(),u:actorName(),a:a});if(state.log.length>800)state.log=state.log.slice(-800);clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveAll(),400);if(document.getElementById("v-log")&&document.getElementById("v-log").classList.contains("on"))renderLog();}
 
@@ -953,7 +1094,37 @@ function nextWeek(){if(weekIdx<monthWeeks().length-1){weekIdx++;renderGrid();}}
 
 function refreshCodeList(){let dl=document.getElementById("codeList");if(!dl){dl=document.createElement("datalist");dl.id="codeList";document.body.appendChild(dl);}dl.innerHTML=CFG().codes.map(c=>"<option value='"+esc(c.code)+"'>"+esc(c.label)+"</option>").join("");}
 function resolveCode(v){v=(v||"").trim();if(!v)return"";const codes=CFG().codes.map(c=>c.code);let m=codes.find(c=>c.toLowerCase()===v.toLowerCase());if(m)return m;const pre=codes.filter(c=>c.toLowerCase().startsWith(v.toLowerCase()));if(pre.length===1)return pre[0];return null;}
-function commitCell(id,d,v){const r=resolveCode(v);if(r===null)return false;const old=getCode(id,d);if(r===old)return true;const dr=state.drivers.find(x=>x.id===id);if(!state.schedule[id])state.schedule[id]={};if(r)state.schedule[id][d]=r;else delete state.schedule[id][d];dirty();logAction("Turno "+(dr?dr.cognome+" "+dr.nome:id)+" "+fmtDM(YM,d)+": "+(r||"vuoto"));if(dr&&driverHasViolation(dr))toast("⚠️ "+dr.cognome+": 7+ giorni consecutivi senza riposo");return true;}
+function commitCell(id,d,v){
+  const r=resolveCode(v);
+  if(r===null)return false;
+  const old=getCode(id,d);
+  if(r===old)return true;
+  const dr=state.drivers.find(x=>x.id===id);
+  /* Update in-memory state immediately (optimistic update) */
+  if(!state.schedule[id])state.schedule[id]={};
+  if(r)state.schedule[id][d]=r;
+  else delete state.schedule[id][d];
+  /* Immediate per-cell DB write (non-blocking, with retries) */
+  if(DB_SYNC){
+    const branch=teamFiliale||(filiali()[0]||"DLO1");
+    setSaveState("saving");
+    TurniApi.schedulerSetEntry({
+      month:YM,
+      local_driver_id:id,
+      day:d,
+      shift_code:r||"",
+      branch_code:branch,
+    }).then(()=>setSaveState("saved")).catch(err=>{
+      console.warn("[cell save]",err.message);
+      setSaveState("error");
+      /* Fallback: the bulk save on dirty() will retry */
+    });
+  }
+  dirty();
+  logAction("Turno "+(dr?dr.cognome+" "+dr.nome:id)+" "+fmtDM(YM,d)+": "+(r||"vuoto"));
+  if(dr&&driverHasViolation(dr))toast("⚠ "+dr.cognome+": 7+ giorni consecutivi senza riposo");
+  return true;
+}
 function nextCell(id,d,dir){const di=gridDrivers.findIndex(x=>x.id===id),wi=gridDays.indexOf(d);if(dir==="down"&&di+1<gridDrivers.length)return[gridDrivers[di+1].id,d];if(dir==="up"&&di>0)return[gridDrivers[di-1].id,d];if(dir==="right"){if(wi+1<gridDays.length)return[id,gridDays[wi+1]];if(di+1<gridDrivers.length)return[gridDrivers[di+1].id,gridDays[0]];}if(dir==="left"){if(wi>0)return[id,gridDays[wi-1]];if(di>0)return[gridDrivers[di-1].id,gridDays[gridDays.length-1]];}return null;}
 function openCellEdit(id,d){const td=document.getElementById("c_"+id+"_"+d);if(!td)return;const cur=getCode(id,d);td.innerHTML="<div class='cellEdit'><input class='cellInp' list='codeList' value=\""+esc(cur)+"\" autocomplete='off' autocapitalize='off' spellcheck='false'><button class='cellPick' tabindex='-1' onmousedown='event.preventDefault();pickerFromEdit("+id+","+d+")'>▾</button></div>";const inp=td.querySelector(".cellInp");inp.focus();inp.select();
   inp.addEventListener("keydown",e=>cellKey(e,id,d));
@@ -966,7 +1137,24 @@ function cellKey(e,id,d){const inp=e.target;const go=dir=>{cellNav=true;const ok
   else if(e.key==="Escape"){e.preventDefault();cellNav=true;renderGrid();setTimeout(()=>cellNav=false,0);}}
 function pickerFromEdit(id,d){cellNav=true;renderGrid();setTimeout(()=>cellNav=false,0);openPicker(id,d);}
 function openPicker(id,d){pkCtx={id,d};const dr=state.drivers.find(x=>x.id===id);document.getElementById("pkTitle").textContent=dr.cognome+" "+dr.nome;document.getElementById("pkSub").textContent=dowName(YM,d)+" "+d+" · attuale: "+(getCode(id,d)||"disponibile");const cur=getCode(id,d);let h="";for(const g of groupedCodes()){h+="<div class='codegrp'><h4>"+esc(g.name)+"</h4><div class='codegrid'>";for(const c of g.codes)h+="<button class='"+(c===cur?"sel":"")+"' style='background:var(--"+g.cls+"-bg);color:var(--"+g.cls+")' onclick=\"setCell('"+c+"')\">"+esc(c)+"<br><small style='font-weight:400'>"+esc(codeLabel(c))+"</small></button>";h+="</div></div>";}document.getElementById("pkBody").innerHTML=h;document.getElementById("picker").classList.add("on");}
-function setCell(code){const{id,d}=pkCtx;const dr=state.drivers.find(x=>x.id===id);if(!state.schedule[id])state.schedule[id]={};if(code)state.schedule[id][d]=code;else delete state.schedule[id][d];dirty();logAction("Turno "+(dr?dr.cognome+" "+dr.nome:id)+" "+fmtDM(YM,d)+": "+(code||"vuoto"));if(dr&&driverHasViolation(dr))toast("⚠️ "+dr.cognome+": 7+ giorni consecutivi senza riposo");closeAll();renderGrid();}
+function setCell(code){
+  const{id,d}=pkCtx;
+  const dr=state.drivers.find(x=>x.id===id);
+  if(!state.schedule[id])state.schedule[id]={};
+  if(code)state.schedule[id][d]=code;
+  else delete state.schedule[id][d];
+  /* Immediate per-cell DB write */
+  if(DB_SYNC){
+    const branch=teamFiliale||(filiali()[0]||"DLO1");
+    setSaveState("saving");
+    TurniApi.schedulerSetEntry({month:YM,local_driver_id:id,day:d,shift_code:code||"",branch_code:branch})
+      .then(()=>setSaveState("saved")).catch(e=>{console.warn("[setCell]",e.message);setSaveState("error");});
+  }
+  dirty();
+  logAction("Turno "+(dr?dr.cognome+" "+dr.nome:id)+" "+fmtDM(YM,d)+": "+(code||"vuoto"));
+  if(dr&&driverHasViolation(dr))toast("⚠️ "+dr.cognome+": 7+ giorni consecutivi senza riposo");
+  closeAll();renderGrid();
+}
 
 /* ---------- COPERTURA ---------- */
 function setCovMode(m){covMode=m;document.querySelectorAll("#covMode button").forEach(b=>b.classList.toggle("on",b.dataset.m===m));renderCov();}
@@ -993,7 +1181,19 @@ function renderCov(){
   h+="<tr><th style='text-align:left;min-width:150px'>Service"+(fil?" · "+esc(fil):"")+"</th>";for(const d of visDays)h+="<th>"+d+"<br><small>"+dowName(YM,d)+"</small></th>";h+="<th>TOT</th></tr></thead><tbody>";h+="<tr class='sec'><td colspan='"+(visDays.length+2)+"'>"+(covMode==="delta"?"Delta = in turno − forecast":covMode==="harmony"?"Harmony — in turno":"Forecast"+(editable?" (modificabile)":" (sola lettura)"))+" · "+(covRange==="week"?"settimana":"mese intero")+"</td></tr>";
   if(!svs.length)h+="<tr><td colspan='"+(visDays.length+2)+"' style='padding:14px;color:var(--muted)'>Nessun servizio assegnato"+(fil?" alla filiale "+esc(fil):"")+". Aggiungilo in ⚙ Configurazione → Servizi &amp; Forecast.</td></tr>";
   for(const s of svs){h+="<tr><td class='svc'>"+esc(s.label)+(s.minOf?" <small style='color:var(--muted)'>(auto MIN)</small>":"")+"</td>";let tot=0;for(const d of visDays){if(covMode==="forecast"){const v=forecastOf(s,d);tot+=v;h+=(s.minOf||!editable)?"<td class='d-zero'>"+v+"</td>":"<td><input type='number' min='0' value='"+v+"' onchange='setFc(\""+s.key+"\","+d+",this.value)'></td>";}else if(covMode==="harmony"){const v=harmonyOf(s,d,drivers);tot+=v;h+="<td>"+(v||"<span class='d-zero'>0</span>")+"</td>";}else{const v=deltaOf(s,d,drivers);tot+=v;h+="<td class='"+(v<0?"d-neg":v>0?"d-pos":"d-zero")+"'>"+v+"</td>";}}h+="<td><b>"+tot+"</b></td></tr>";}h+="</tbody>";document.getElementById("covTbl").innerHTML=h;}
-function setFc(key,d,val){if(!state.forecast[key])state.forecast[key]={};state.forecast[key][d]=+val||0;dirty();logAction("Forecast "+key+" g"+d+" = "+(+val||0));renderCov();}
+function setFc(key,d,val){
+  if(!state.forecast[key])state.forecast[key]={};
+  state.forecast[key][d]=+val||0;
+  /* Immediate per-cell DB write for forecast */
+  if(DB_SYNC){
+    const branch=teamFiliale||(filiali()[0]||"DLO1");
+    TurniApi.schedulerSetForecast({month:YM,branch_code:branch,service_key:key,day:d,qty:+val||0})
+      .catch(e=>console.warn("[setFc]",e.message));
+  }
+  dirty();
+  logAction("Forecast "+key+" g"+d+" = "+(+val||0));
+  renderCov();
+}
 const kpi=(v,l)=>"<div class='kpi'><b>"+v+"</b><span>"+l+"</span></div>";
 
 /* ---------- DAS ---------- */
@@ -1271,8 +1471,47 @@ function renderLeg(){document.getElementById("legTbl").innerHTML="<tr><th>Codice
 
 /* ---------- DATI & SYNC ---------- */
 function exportJson(){const blob=new Blob([JSON.stringify(state,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="turni_"+YM+".json";a.click();URL.revokeObjectURL(a.href);}
-function importJson(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j.drivers||!j.schedule)throw 0;state=j;if(j.meta&&j.meta.month)YM=j.meta.month;migrate();if(state.config)localStorage.setItem("turniDSP_config",JSON.stringify(state.config));saveAll();refreshAll();toast("Importazione completata");}catch(e){toast("File non valido");}};r.readAsText(f);ev.target.value="";}
-function resetMonth(){if(!isAdmin())return;if(!confirm("Azzerare turni e forecast di "+YM+"?"))return;state.schedule={};state.forecast={};dirty();logAction("Turni e forecast del mese azzerati");refreshAll();}
+function importJson(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const j=JSON.parse(r.result);
+      if(!j.drivers||!j.schedule)throw 0;
+      state=j;
+      if(j.meta&&j.meta.month)YM=j.meta.month;
+      migrate();
+      /* Offline fallback cache */
+      try{if(state.config)localStorage.setItem("turniDSP_config",JSON.stringify(state.config));}catch(_){}
+      saveAll();
+      refreshAll();
+      /* Push imported data to DB */
+      if(DB_SYNC){
+        const branch=teamFiliale||(filiali()[0]||"DLO1");
+        toast("Importazione completata — push al database…");
+        TurniApi.schedulerImport(YM,branch,state)
+          .then(r=>toast("DB aggiornato: "+r.cells+" celle, "+r.drivers+" driver"))
+          .catch(e=>toast("Import locale OK, errore DB: "+e.message));
+      }else toast("Importazione completata");
+    }catch(e){toast("File non valido");}
+  };
+  r.readAsText(f);ev.target.value="";
+}
+function resetMonth(){
+  if(!isAdmin())return;
+  if(!confirm("Azzerare turni e forecast di "+YM+"?"))return;
+  state.schedule={};state.forecast={};
+  /* Clear DB as well */
+  if(DB_SYNC){
+    const branch=teamFiliale||(filiali()[0]||"DLO1");
+    TurniApi.schedulerDeleteEntries(YM,branch)
+      .then(()=>toast("Mese azzerato nel database"))
+      .catch(e=>console.warn("[resetMonth]",e.message));
+  }
+  dirty();
+  logAction("Turni e forecast del mese azzerati");
+  refreshAll();
+}
 async function syncPush(){const url=apiUrl();if(!url)return;try{const r=await fetch(url+"?month="+YM,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(state)});const j=await r.json();document.getElementById("syncMsg").textContent=j.ok?"Salvato sul server ("+new Date().toLocaleTimeString("it-IT")+")":"Errore: "+(j.error||"sconosciuto");}catch(e){document.getElementById("syncMsg").textContent="Connessione fallita: "+e.message;}}
 async function syncPull(){const url=apiUrl();if(!url)return;try{const r=await fetch(url+"?month="+YM);const j=await r.json();if(j&&j.drivers){state=j;migrate();if(state.config)localStorage.setItem("turniDSP_config",JSON.stringify(state.config));saveAll();refreshAll();document.getElementById("syncMsg").textContent="Dati scaricati dal server.";}else document.getElementById("syncMsg").textContent="Nessun dato sul server per "+YM+".";}catch(e){document.getElementById("syncMsg").textContent="Connessione fallita: "+e.message;}}
 function apiUrl(){const u=document.getElementById("apiUrl").value.trim();if(u)localStorage.setItem("turniDSP_api",u);else toast("Inserisci l'URL dell'endpoint");return u;}
@@ -1303,7 +1542,47 @@ document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{
     if(sess&&sess.role==="team"&&sess.locked&&users().some(u=>u.username===sess.user)){ROLE="team";teamLocked=true;currentUser=sess.user;teamFiliale=sess.filiale;}
     else{ROLE="team";teamLocked=false;currentUser=pUser.full_name||pUser.username||"team";}
   }
-  ensureTeamFiliale();applyRole();refreshFilSelects();refreshAll();})();
+  ensureTeamFiliale();applyRole();refreshFilSelects();refreshAll();
+
+  /* ═══ ONE-TIME localStorage → PostgreSQL MIGRATION ═══
+     On first authenticated session, check if there is legacy scheduler data
+     in localStorage that has never been pushed to PostgreSQL.
+     If found: push it, then delete the legacy key so this never runs again. */
+  if(DB_SYNC){
+    setTimeout(async()=>{
+      const MIGRATED_KEY="turniDSP_ls_migrated_v1";
+      if(localStorage.getItem(MIGRATED_KEY))return; // already done
+      const branch=teamFiliale||(filiali()[0]||"DLO1");
+      let migratedAny=false;
+      // Scan last 12 months for legacy data
+      const now=new Date();
+      for(let offset=-2;offset<=1;offset++){
+        const d=new Date(now.getFullYear(),now.getMonth()+offset,1);
+        const ym=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+        const raw=localStorage.getItem("turniDSP_"+ym);
+        if(!raw)continue;
+        let legacy;
+        try{legacy=JSON.parse(raw);}catch{continue;}
+        if(!legacy||!legacy.drivers||!legacy.schedule)continue;
+        // Check if DB already has data for this month
+        try{
+          const check=await TurniApi.schedulerMonth(ym,branch);
+          if(check&&check.drivers&&check.drivers.length>0)continue; // already in DB
+          // Push legacy data to DB
+          console.log("[migration] pushing localStorage data for",ym,"to PostgreSQL");
+          const r=await TurniApi.schedulerImport(ym,branch,legacy);
+          console.log("[migration] pushed",r.cells,"cells,",r.drivers,"drivers for",ym);
+          migratedAny=true;
+          // Remove legacy key after successful migration
+          localStorage.removeItem("turniDSP_"+ym);
+        }catch(e){console.warn("[migration] error for",ym,e.message);}
+      }
+      // Mark migration as done
+      localStorage.setItem(MIGRATED_KEY,"1");
+      if(migratedAny)toast("Dati migrati da localStorage a PostgreSQL ✓");
+    }, 2000); // run 2s after init to not block the first render
+  }
+})();
 
 /* ══════════════════════════════════════════════════════════════
    SCHEDULER UX UPGRADE

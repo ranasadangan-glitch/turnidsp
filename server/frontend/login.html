@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestione Turni — Accesso</title>
+<style>
+:root{--ink:#16233B;--line:#E3E8F0;--line2:#cfd6e4;--muted:#6B7689;--pri:#1F5FBF;--bad:#D6453D}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);
+  background:#F4F6FA;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;
+  padding:34px 30px;width:360px;max-width:100%;box-shadow:0 8px 30px rgba(16,35,59,.07)}
+.logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px}
+.logo .mark{width:42px;height:42px;border-radius:11px;background:var(--pri);color:#fff;
+  font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.95rem}
+.logo .name{font-weight:800;font-size:1.1rem}
+.logo .name small{display:block;font-weight:400;font-size:.72rem;color:var(--muted)}
+label{display:block;font-size:.82rem;margin:14px 0 6px;color:var(--muted)}
+input{width:100%;padding:12px;border:1px solid var(--line2);border-radius:10px;font-size:.95rem}
+input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(31,95,191,.14)}
+button{width:100%;margin-top:22px;padding:13px;background:var(--pri);color:#fff;border:0;
+  border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+.err{color:var(--bad);font-size:.84rem;margin-top:12px;min-height:1.1em;text-align:center}
+.foot{margin-top:18px;font-size:.78rem;color:var(--muted);text-align:center}
+.adv{margin-top:14px;text-align:center}
+.adv summary{cursor:pointer;color:var(--muted);font-size:.78rem;list-style:none}
+.adv[open] summary{margin-bottom:6px}
+.fp-link{display:block;text-align:center;margin-top:10px;font-size:.82rem;color:var(--pri);cursor:pointer;text-decoration:underline;background:none;border:0}
+.fp-panel{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.fp-panel.hide{display:none}
+.fp-msg{font-size:.82rem;margin-top:8px;text-align:center;min-height:1.1em}
+.fp-msg.ok{color:#2E9E5B}.fp-msg.err{color:var(--bad)}
+</style>
+</head>
+<body>
+  <form class="card" id="f">
+    <div class="logo">
+      <div class="mark">GT</div>
+      <div class="name">Gestione Turni<small>Workforce Platform</small></div>
+    </div>
+
+    <label for="u">Username</label>
+    <input id="u" autocomplete="username" autocapitalize="off" autofocus>
+
+    <label for="p">Password</label>
+    <input id="p" type="password" autocomplete="current-password">
+
+    <button id="btn" type="submit">Accedi</button>
+    <div class="err" id="err"></div>
+
+    <details class="adv">
+      <summary>Server API (avanzato)</summary>
+      <input id="apiBase" placeholder="https://tuodominio.it — vuoto = stesso server">
+    </details>
+
+    <div class="foot">Primo accesso: <b>admin</b> / <b>admin123</b></div>
+
+    <button type="button" class="fp-link" id="fpLink">Password dimenticata?</button>
+
+    <div class="fp-panel hide" id="fpPanel">
+      <div id="fpStep1">
+        <label for="fpUser">Username o email</label>
+        <input id="fpUser" autocapitalize="off">
+        <button type="button" id="fpReqBtn">Invia istruzioni</button>
+      </div>
+      <div id="fpStep2" class="hide">
+        <label for="fpToken">Codice ricevuto</label>
+        <input id="fpToken">
+        <label for="fpNewPass">Nuova password</label>
+        <input id="fpNewPass" type="password" placeholder="min 10 caratteri, maiuscola, minuscola, numero">
+        <button type="button" id="fpResetBtn">Reimposta password</button>
+      </div>
+      <div class="fp-msg" id="fpMsg"></div>
+    </div>
+  </form>
+
+<script src="api.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+if (TurniApi.isLoggedIn() && TurniApi.user()) location.replace('index.html');
+const saved = localStorage.getItem('turnidsp_api_base'); if (saved) $('apiBase').value = saved;
+
+$('f').addEventListener('submit', doLogin);
+
+// ---- password dimenticata (pannello inline, due passaggi) ----
+$('fpLink').addEventListener('click', () => {
+  $('fpPanel').classList.toggle('hide');
+  $('fpMsg').textContent = '';
+});
+$('fpReqBtn').addEventListener('click', async () => {
+  const id = $('fpUser').value.trim();
+  $('fpMsg').className = 'fp-msg';
+  if (!id) { $('fpMsg').textContent = 'Inserisci username o email.'; $('fpMsg').className = 'fp-msg err'; return; }
+  $('fpReqBtn').disabled = true;
+  try {
+    const r = await TurniApi.forgotPassword(id);
+    $('fpMsg').textContent = r.message || 'Se l’account esiste, riceverai le istruzioni.';
+    $('fpMsg').className = 'fp-msg ok';
+    $('fpStep2').classList.remove('hide');
+    // In sviluppo (o senza SMTP configurato) il server restituisce il codice
+    // direttamente, per poter testare il flusso senza una casella email.
+    if (r.dev_token) $('fpToken').value = r.dev_token;
+  } catch (e) {
+    $('fpMsg').textContent = e.message || 'Richiesta non riuscita.';
+    $('fpMsg').className = 'fp-msg err';
+  } finally {
+    $('fpReqBtn').disabled = false;
+  }
+});
+$('fpResetBtn').addEventListener('click', async () => {
+  const tok = $('fpToken').value.trim();
+  const pw = $('fpNewPass').value;
+  $('fpMsg').className = 'fp-msg';
+  if (!tok || !pw) { $('fpMsg').textContent = 'Inserisci il codice e la nuova password.'; $('fpMsg').className = 'fp-msg err'; return; }
+  $('fpResetBtn').disabled = true;
+  try {
+    const r = await TurniApi.resetPassword(tok, pw);
+    $('fpMsg').textContent = r.message || 'Password aggiornata. Accedi con la nuova password.';
+    $('fpMsg').className = 'fp-msg ok';
+    $('fpStep2').classList.add('hide');
+    $('u').value = $('fpUser').value.trim();
+    $('p').focus();
+  } catch (e) {
+    $('fpMsg').textContent = e.message || 'Reset non riuscito.';
+    $('fpMsg').className = 'fp-msg err';
+  } finally {
+    $('fpResetBtn').disabled = false;
+  }
+});
+
+async function doLogin(ev){
+  ev.preventDefault();
+  $('err').textContent = '';
+  $('btn').disabled = true; $('btn').textContent = 'Accesso…';
+  TurniApi.setApiBase($('apiBase').value.trim());
+  try{
+    await TurniApi.login($('u').value.trim(), $('p').value);
+    location.replace('index.html');
+  }catch(e){
+    // Always surface *something*, even for raw network errors (e.g. offline,
+    // blocked request, unexpected redirect) so the button never just sits there.
+    $('err').textContent = (e && e.message) ? e.message : 'Accesso non riuscito. Controlla la connessione e riprova.';
+  }finally{
+    $('btn').disabled = false; $('btn').textContent = 'Accedi';
+  }
+}
+</script>
+</body>
+</html>

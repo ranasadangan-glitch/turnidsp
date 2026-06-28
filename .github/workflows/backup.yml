@@ -1,0 +1,36 @@
+# Automated daily PostgreSQL backup (provider-independent).
+# Setup: add a repository secret DATABASE_URL (your managed DB connection string).
+# Backups are uploaded as workflow artifacts (retained 30 days). You can also
+# push them to S3/GCS by adding a step.
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # every day at 02:00 UTC
+  workflow_dispatch: {}    # allow manual runs
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "DATABASE_URL secret not set"; exit 1; }
+          mkdir -p backups
+          TS=$(date +%Y%m%d_%H%M%S)
+          pg_dump "$DATABASE_URL" | gzip > "backups/turnidsp_${TS}.sql.gz"
+          ls -lh backups
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: turnidsp-db-backup
+          path: backups/*.sql.gz
+          retention-days: 30

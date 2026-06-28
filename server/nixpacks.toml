@@ -1,0 +1,9 @@
+# Nixpacks build config for Railway (Root Directory = server).
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci || npm install"]
+
+[start]
+cmd = "npm start"

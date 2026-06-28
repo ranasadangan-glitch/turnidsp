@@ -174,7 +174,7 @@
       </div>
       <div style="overflow-x:auto">
         <table class="table" id="dspTbl">
-          <thead><tr><th>Servizio</th><th>Forecast</th><th>Pianificati</th><th>Delta</th><th>Copertura</th></tr></thead>
+          <thead><tr><th>Filiale</th><th>Driver totali</th><th>In turno</th><th>Copertura</th></tr></thead>
           <tbody><tr><td colspan="5"><div class="skeleton" style="height:24px;border-radius:6px"></div></td></tr></tbody>
         </table>
       </div>
@@ -490,9 +490,14 @@ async function refreshAll() {
     renderForecastCard(_kpiData);
     renderExpiryCard(_kpiData);
     renderAttendanceCard(_kpiData);
-  } catch (e) { toast('Errore KPI: ' + e.message, 'bad'); console.error(e); }
-
-  loadDSP(date, branch);
+    // Pass kpiData so loadDSP doesn't need a second API call
+    loadDSP(date, branch, _kpiData);
+  } catch (e) {
+    toast('Errore KPI: ' + e.message, 'bad');
+    console.error(e);
+    // Still try to load DSP even if KPI partially failed
+    loadDSP(date, branch, null);
+  }
   loadAlerts();
   if (currentSection === 'charts')   renderCharts();
   if (currentSection === 'activity') renderActivity();
@@ -630,35 +635,49 @@ function renderAttendanceCard(d) {
 }
 
 // ── DSP Operations table ──────────────────────────────────────
-async function loadDSP(date, branch) {
+async function loadDSP(date, branch, kpiData) {
+  /* Uses unified data from /api/kpi (result.dsp) which merges both
+     the HR system (employees+schedules) and the Scheduler system
+     (scheduler_drivers+schedule_entries) so the dashboard always
+     matches what the scheduler shows. */
+  const tbody = $('dspTbl').querySelector('tbody');
   try {
-    const data = await TurniApi.dspDashboard(date, branch);
-    const tbody = $('dspTbl').querySelector('tbody');
-    if (!data.by_service?.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Nessun dato per questa data</td></tr>'; return; }
-    tbody.innerHTML = data.by_service.map(r => {
-      const ok = r.delta >= 0;
-      const cov = r.coverage_pct !== null ? r.coverage_pct + '%' : '—';
+    // Use pre-fetched kpiData if available, otherwise refetch
+    const dsp = kpiData?.dsp || (await TurniApi.kpi({ date, ...(branch ? { branch } : {}) })).dsp;
+    if (!dsp || !dsp.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Nessun dato per questa data (nessun driver o turno registrato)</td></tr>';
+      return;
+    }
+    let totDrivers = 0, totPresent = 0, totAbsent = 0, totOff = 0;
+    tbody.innerHTML = dsp.map(r => {
+      totDrivers += (r.drivers || 0);
+      totPresent += (r.present || 0);
+      totAbsent  += (r.absent  || 0);
+      totOff     += (r.off     || 0);
+      const covPct = r.drivers > 0 ? Math.round((r.present / r.drivers) * 100) : 0;
       return `<tr>
-        <td><b>${r.service || '—'}</b></td>
-        <td>${r.forecast}</td>
-        <td>${r.planned}</td>
-        <td class="${ok ? 'text-ok' : 'text-bad'} font-semi">${r.delta > 0 ? '+' : ''}${r.delta}</td>
+        <td><b>${r.branch_code || '—'}</b></td>
+        <td>${r.drivers || 0}</td>
+        <td class="text-ok font-semi">${r.present || 0}</td>
         <td>
           <div style="display:flex;align-items:center;gap:6px">
             <div class="progress-wrap" style="height:6px;width:80px">
-              <div class="progress-bar" style="width:${Math.min(100, r.coverage_pct || 0)}%;background:${ok ? 'var(--ok)' : 'var(--bad)'}"></div>
+              <div class="progress-bar" style="width:${covPct}%;background:${covPct >= 80 ? 'var(--ok)' : covPct >= 50 ? 'var(--warn)' : 'var(--bad)'}"></div>
             </div>
-            <span class="text-sm">${cov}</span>
+            <span class="text-sm">${covPct}%</span>
           </div>
         </td>
       </tr>`;
     }).join('') +
     `<tr style="border-top:2px solid var(--line)">
-      <td><b>Totale</b></td><td><b>${data.totals.forecast}</b></td><td><b>${data.totals.planned}</b></td>
-      <td class="${data.totals.delta >= 0 ? 'text-ok' : 'text-bad'} font-semi">${data.totals.delta > 0 ? '+' : ''}${data.totals.delta}</td>
-      <td><b>${data.totals.coverage_pct !== null ? data.totals.coverage_pct + '%' : '—'}</b></td>
+      <td><b>Totale</b></td>
+      <td><b>${totDrivers}</b></td>
+      <td class="text-ok font-semi"><b>${totPresent}</b></td>
+      <td><b>${totDrivers > 0 ? Math.round(totPresent/totDrivers*100) : 0}%</b></td>
     </tr>`;
-  } catch (e) { $('dspTbl').querySelector('tbody').innerHTML = `<tr><td colspan="5" class="text-muted">${e.message}</td></tr>`; }
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-muted">${e.message}</td></tr>`;
+  }
 }
 
 // ── Alerts table ──────────────────────────────────────────────

@@ -3,1059 +3,752 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gestione Turni — Control Center</title>
-<link rel="stylesheet" href="design.css">
-<!-- Chart.js CDN -->
+<title>TurniDSP — Dashboard</title>
+<link rel="stylesheet" href="platform.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-/* ── Dashboard-specific overrides ── */
-.mini-stats { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
-.mini-stat  { font-size:.75rem; color:var(--muted); }
-.mini-stat b{ color:var(--ink); }
-.kpi-sub    { display:flex; gap:16px; margin-top:6px; flex-wrap:wrap; }
-.kpi-sub-item { display:flex; flex-direction:column; }
-.kpi-sub-item span:first-child { font-size:.68rem; color:var(--muted); }
-.kpi-sub-item span:last-child  { font-size:.9rem; font-weight:700; }
-.kpi-sparkline { height:36px; margin-top:8px; }
-.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.section-title  { font-size:1rem; font-weight:700; }
-
-/* Activity icon backgrounds */
-.bg-pri    { background:var(--pri-bg);    color:var(--pri); }
-.bg-ok     { background:var(--ok-bg);     color:var(--ok); }
-.bg-warn   { background:var(--warn-bg);   color:var(--warn); }
-.bg-bad    { background:var(--bad-bg);    color:var(--bad); }
-.bg-purple { background:var(--purple-bg); color:var(--purple); }
-.bg-teal   { background:var(--teal-bg);   color:var(--teal); }
-
-/* Contract expiry widget */
-.expiry-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); }
-.expiry-row:last-child { border-bottom:0; }
-.expiry-num { font-size:1.6rem; font-weight:800; min-width:48px; }
-
-/* Forecast row */
-.fc-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); }
-.fc-row:last-child{ border-bottom:0; }
-.fc-label { flex:1; font-size:.85rem; }
-.fc-bar-wrap { width:120px; }
-
-/* Date / branch selectors */
-.toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.toolbar input[type="date"], .toolbar select { padding:7px 10px; border:1px solid var(--line2); border-radius:var(--radius-sm); background:var(--card); color:var(--ink); font-size:.85rem; }
-
-/* Module grid */
-.modules { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:4px; }
-.mod-card { display:flex; flex-direction:column; gap:6px; padding:18px; border-radius:var(--radius); border:1.5px solid var(--line); background:var(--card); text-decoration:none; color:inherit; cursor:pointer; transition:all var(--transition); }
-.mod-card:hover { border-color:var(--pri); box-shadow:0 4px 16px rgba(37,99,235,.1); transform:translateY(-2px); }
-.mod-icon { font-size:1.5rem; width:42px; height:42px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:var(--pri-bg); }
-.mod-title { font-size:.9rem; font-weight:700; }
-.mod-sub   { font-size:.78rem; color:var(--muted); }
-
-/* Users table small */
-.adminonly.hide { display:none!important; }
-</style>
 </head>
 <body>
-
-<!-- Toast container -->
 <div id="toast-container"></div>
 
-<!-- Header -->
-<header class="app-header">
-  <div class="app-logo">🚚 Gestione Turni <small>Control Center</small></div>
-  <div class="header-spacer"></div>
+<div class="plat-shell">
 
-  <!-- Global search -->
-  <div id="searchBox" style="position:relative">
-    <div style="display:flex;align-items:center;gap:7px;padding:7px 12px;border:1.5px solid var(--line2);border-radius:9px;background:var(--bg2);min-width:220px;cursor:text" onclick="document.getElementById('searchInput').focus()">
-      <span>🔍</span>
-      <input id="searchInput" placeholder="Cerca dipendente, ID…" autocomplete="off"
-             style="flex:1;border:0;background:none;font-size:.85rem;outline:none;color:var(--ink)"
-             oninput="debouncedSearch(this.value)" onblur="setTimeout(()=>document.getElementById('searchDropdown').style.display='none',200)">
-    </div>
-    <div id="searchDropdown" style="display:none;position:absolute;top:44px;left:0;right:0;min-width:340px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);z-index:300;max-height:400px;overflow-y:auto"></div>
-  </div>
-
-  <!-- Notifications bell -->
-  <div style="position:relative">
-    <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleNotifPanel()" title="Notifiche" style="position:relative">
-      🔔
-      <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--bad);color:#fff;border-radius:10px;font-size:.6rem;font-weight:700;padding:1px 5px;min-width:16px;text-align:center">0</span>
-    </button>
-    <div id="notifPanel" style="display:none;position:absolute;top:46px;right:0;width:360px;max-height:520px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);z-index:300;overflow:hidden;flex-direction:column">
-      <div style="padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between">
-        <span style="font-weight:700;font-size:.875rem">Notifiche</span>
-        <button class="btn btn-ghost btn-sm" onclick="markAllRead()" style="font-size:.75rem;padding:3px 8px">Segna lette</button>
-      </div>
-      <div id="notifList" style="overflow-y:auto;max-height:430px"></div>
-    </div>
-  </div>
-
-  <div class="toolbar">
-    <input type="date" id="kpiDate">
-    <select id="branchSel" style="min-width:100px"></select>
-  </div>
-  <span style="font-size:.85rem;color:var(--muted);padding:0 12px" id="who"></span>
-  <a class="btn btn-ghost btn-sm" href="employees.html" style="text-decoration:none">👥 Dipendenti</a>
-  <a class="btn btn-ghost btn-sm" href="index.html" style="text-decoration:none">🗓 Scheduler</a>
-  <button class="btn btn-ghost btn-sm" onclick="doLogout()">Esci</button>
-</header>
-
-<div class="app-layout">
-<!-- Sidebar -->
-<nav class="sidebar">
-  <div class="nav-item active" onclick="showSection('overview')"><span class="icon">📊</span> Overview</div>
-  <div class="nav-item" onclick="showSection('charts')"><span class="icon">📈</span> Analytics</div>
-  <div class="nav-item" onclick="showSection('activity')"><span class="icon">⚡</span> Attività recente</div>
-  <div class="nav-item" onclick="showSection('modules')"><span class="icon">🧩</span> Moduli</div>
-  <a class="nav-item" href="employees.html" style="text-decoration:none"><span class="icon">👥</span> Dipendenti</a>
-  <div class="nav-item adminonly hide" onclick="showSection('users')"><span class="icon">🔑</span> Team & Utenti</div>
-
-  <div class="sidebar-section" style="margin-top:auto;padding-bottom:8px">Quick Actions</div>
-  <button class="nav-item" onclick="openModal('newEmployee')"><span class="icon">➕</span> Nuovo dipendente</button>
-  <a class="nav-item" href="index.html"><span class="icon">🗓</span> Crea turno</a>
-  <button class="nav-item" onclick="openModal('newAbsence')"><span class="icon">🏥</span> Registra assenza</button>
-</nav>
-
-<!-- Main content -->
-<main class="page-content">
-
-  <!-- ── OVERVIEW SECTION ─────────────────────────────────── -->
-  <section id="sec-overview">
-    <div class="page-header">
+  <!-- ── Sidebar ── -->
+  <nav class="plat-nav" id="platNav">
+    <div class="nav-brand">
+      <div class="nav-brand-icon">🚚</div>
       <div>
-        <div class="page-title" id="greetTitle">Dashboard</div>
-        <div class="page-sub" id="greetSub">Caricamento dati in corso…</div>
+        <div class="nav-brand-name">TurniDSP</div>
+        <div class="nav-brand-sub">Global One S.p.A.</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="refreshAll()">↻ Aggiorna</button>
     </div>
 
-    <!-- KPI Cards row 1 -->
-    <div class="kpi-grid" id="kpiGrid">
-      <!-- filled by JS -->
-      <div class="kpi-card pri animate-in skeleton" style="height:130px"></div>
-      <div class="kpi-card ok  animate-in skeleton animate-in-delay-1" style="height:130px"></div>
-      <div class="kpi-card warn animate-in skeleton animate-in-delay-2" style="height:130px"></div>
-      <div class="kpi-card bad  animate-in skeleton animate-in-delay-3" style="height:130px"></div>
+    <div class="nav-user">
+      <div class="nav-avatar" id="navAvatar">—</div>
+      <div>
+        <div class="nav-uname" id="navUname">—</div>
+        <div class="nav-role"  id="navRole">—</div>
+      </div>
     </div>
 
-    <!-- Row 2: forecast + contracts + attendance breakdown -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px" id="row2Grid">
-      <!-- Forecast vs Planned -->
-      <div class="card card-pad animate-in">
-        <div class="section-header">
-          <span class="section-title">🎯 Forecast vs Planned</span>
-          <span class="badge badge-muted" id="fcDateBadge">—</span>
+    <div class="nav-group-label">Piattaforma</div>
+    <button class="nav-link active" onclick="showSection('overview')">
+      <span class="nl-icon">📊</span>Overview
+    </button>
+    <button class="nav-link" onclick="showSection('charts')">
+      <span class="nl-icon">📈</span>Analytics
+    </button>
+    <button class="nav-link" onclick="showSection('activity')">
+      <span class="nl-icon">⚡</span>Attività recente
+    </button>
+
+    <div class="nav-group-label">Moduli</div>
+    <a class="nav-link" href="scheduler.html">
+      <span class="nl-icon">🗓</span>Scheduler turni
+    </a>
+    <a class="nav-link" href="employees.html">
+      <span class="nl-icon">👥</span>Dipendenti
+    </a>
+    <button class="nav-link" onclick="showSection('modules')">
+      <span class="nl-icon">🧩</span>Tutti i moduli
+    </button>
+
+    <div class="nav-group-label">Admin</div>
+    <button class="nav-link adminonly" onclick="showSection('users')">
+      <span class="nl-icon">🔑</span>Team &amp; Utenti
+    </button>
+
+    <div class="nav-bottom">
+      <div class="nav-sync-pill" id="navSync">🔵 Connesso</div>
+      <button class="nav-logout" onclick="doLogout()">
+        <span>↪</span>Esci
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <div class="plat-content">
+
+    <!-- Top header -->
+    <header class="plat-header">
+      <div>
+        <span class="ph-title" id="greetTitle">Dashboard</span>
+        <span class="ph-sub"  id="greetSub"></span>
+      </div>
+      <div class="ph-spacer"></div>
+
+      <!-- Global search -->
+      <div class="ph-search">
+        <input id="searchInput" placeholder="Cerca dipendente, ID…" autocomplete="off"
+               oninput="debouncedSearch(this.value)"
+               onblur="setTimeout(()=>document.getElementById('searchDd').style.display='none',200)">
+        <div id="searchDd" class="ph-search-dd"></div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="ph-notif">
+        <button class="ph-notif-btn" onclick="toggleNotif()" title="Notifiche">
+          🔔
+          <span class="ph-notif-badge" id="notifBadge">0</span>
+        </button>
+        <div class="ph-notif-panel" id="notifPanel">
+          <div class="ph-notif-head">
+            <span>Notifiche</span>
+            <button class="btn-ghost btn-sm" onclick="markAllRead()" style="padding:3px 8px;font-size:.7rem">Segna lette</button>
+          </div>
+          <div id="notifList"></div>
         </div>
-        <div id="fcContent"><div class="skeleton" style="height:80px;border-radius:8px"></div></div>
       </div>
-      <!-- Contracts expiring -->
-      <div class="card card-pad animate-in animate-in-delay-1">
-        <div class="section-header">
-          <span class="section-title">📋 Contratti in scadenza</span>
-          <button class="btn btn-ghost btn-sm" onclick="showSection('modules')">Vedi tutto</button>
+
+      <!-- Date + branch selectors -->
+      <input type="date" id="kpiDate" class="inp" style="width:140px;font-size:.78rem;padding:6px 9px">
+      <select id="branchSel" class="sel" style="min-width:90px;font-size:.78rem">
+        <option value="">Tutte</option>
+      </select>
+
+      <button class="h-pill primary" onclick="refreshAll()">↻ Aggiorna</button>
+    </header>
+
+    <!-- ── PAGE CONTENT ── -->
+    <main class="plat-page">
+
+      <!-- ══ OVERVIEW ══════════════════════════════════════════ -->
+      <section id="sec-overview">
+        <div class="page-head">
+          <div>
+            <div class="page-title" id="pageTitle">Dashboard</div>
+            <div class="page-sub" id="pageSub">Caricamento…</div>
+          </div>
+          <span id="dspDateLabel" class="text-sm text-muted"></span>
         </div>
-        <div id="expiryContent"><div class="skeleton" style="height:80px;border-radius:8px"></div></div>
-      </div>
-      <!-- Attendance breakdown -->
-      <div class="card card-pad animate-in animate-in-delay-2">
-        <div class="section-header">
-          <span class="section-title">👁 Presenza oggi</span>
+
+        <!-- KPI row 1 -->
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi-card pri skel" style="height:120px"></div>
+          <div class="kpi-card ok  skel fade-in-1" style="height:120px"></div>
+          <div class="kpi-card bad skel fade-in-2" style="height:120px"></div>
+          <div class="kpi-card warn skel fade-in-3" style="height:120px"></div>
         </div>
-        <div id="attContent"><div class="skeleton" style="height:80px;border-radius:8px"></div></div>
-      </div>
-    </div>
 
-    <!-- DSP Operations table -->
-    <div class="card card-pad animate-in" style="margin-bottom:24px">
-      <div class="section-header">
-        <span class="section-title">🚚 DSP Operations — per servizio</span>
-        <span class="text-sm text-muted" id="dspDateLabel"></span>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="table" id="dspTbl">
-          <thead><tr><th>Servizio</th><th>Forecast</th><th>Pianificati</th><th>Delta</th><th>Copertura</th></tr></thead>
-          <tbody><tr><td colspan="5"><div class="skeleton" style="height:24px;border-radius:6px"></div></td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Expiry alerts table -->
-    <div class="card card-pad animate-in" style="margin-bottom:24px">
-      <div class="section-header">
-        <span class="section-title">⏰ Scadenze in arrivo (60 giorni)</span>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="table" id="alertsTbl">
-          <thead><tr><th>Dipendente</th><th>Tipo</th><th>Scadenza</th><th>Giorni</th><th>Stato</th></tr></thead>
-          <tbody><tr><td colspan="5"><div class="skeleton" style="height:24px;border-radius:6px"></div></td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── CHARTS SECTION ───────────────────────────────────── -->
-  <section id="sec-charts" class="hide">
-    <div class="page-header"><div class="page-title">📈 Analytics</div></div>
-    <div class="charts-grid">
-      <div class="chart-card" style="grid-column:span 2">
-        <div class="chart-title">Presenze ultimi 30 giorni</div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chartAttendance"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Forecast vs Pianificato (30 giorni)</div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chartForecast"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Tipi di assenza (90 giorni)</div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chartAbsence"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Crescita dipendenti (12 mesi)</div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chartGrowth"></canvas></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── ACTIVITY SECTION ─────────────────────────────────── -->
-  <section id="sec-activity" class="hide">
-    <div class="page-header"><div class="page-title">⚡ Attività recente</div></div>
-    <div class="card card-pad" style="max-width:700px">
-      <div class="activity-list" id="activityList">
-        <div class="skeleton" style="height:48px;border-radius:8px;margin-bottom:8px"></div>
-        <div class="skeleton" style="height:48px;border-radius:8px;margin-bottom:8px"></div>
-        <div class="skeleton" style="height:48px;border-radius:8px"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── MODULES SECTION ─────────────────────────────────── -->
-  <section id="sec-modules" class="hide">
-    <div class="page-header"><div class="page-title">🧩 Moduli</div></div>
-    <div class="modules">
-      <a class="mod-card" href="index.html"><div class="mod-icon">🗓️</div><div class="mod-title">Pianificazione</div><div class="mod-sub">Turni · settimanale · mensile</div></a>
-      <div class="mod-card" onclick="alert('UI dipendenti in sviluppo — usa API /api/employees')"><div class="mod-icon" style="background:var(--ok-bg);color:var(--ok)">👥</div><div class="mod-title">Dipendenti</div><div class="mod-sub">Anagrafiche · contratti · stato</div></div>
-      <div class="mod-card adminonly hide" onclick="showSection('users')"><div class="mod-icon" style="background:var(--purple-bg);color:var(--purple)">🧩</div><div class="mod-title">Team & Utenti</div><div class="mod-sub">Accessi · ruoli</div></div>
-      <div class="mod-card" onclick="showSection('charts')"><div class="mod-icon" style="background:var(--teal-bg);color:var(--teal)">📊</div><div class="mod-title">Forecast vs Planned</div><div class="mod-sub">Delta · copertura</div></div>
-      <div class="mod-card" onclick="alert('Disciplinare: /api/disciplinary')"><div class="mod-icon" style="background:var(--bad-bg);color:var(--bad)">⚖️</div><div class="mod-title">Disciplinare</div><div class="mod-sub">Richiami · sospensioni · PDF</div></div>
-      <div class="mod-card" onclick="showSection('overview')"><div class="mod-icon" style="background:var(--warn-bg);color:var(--warn)">⏰</div><div class="mod-title">Scadenze</div><div class="mod-sub">Contratti · patenti · formazione</div></div>
-      <div class="mod-card" onclick="loadReportsFull()"><div class="mod-icon" style="background:var(--pri-bg);color:var(--pri)">📈</div><div class="mod-title">Report</div><div class="mod-sub">Ore · assenze · forecast</div></div>
-      <div class="mod-card adminonly hide" onclick="loadAuditFull()"><div class="mod-icon" style="background:var(--bg2);color:var(--muted)">📝</div><div class="mod-title">Registro audit</div><div class="mod-sub">Tutte le modifiche</div></div>
-    </div>
-
-    <!-- Excel / PDF tools -->
-    <div class="card card-pad mt-4">
-      <div class="section-title mb-2">📁 Strumenti Excel & PDF</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <span style="width:100%;font-size:.8rem;font-weight:600;color:var(--muted)">Template Excel</span>
-        <a class="btn btn-ghost btn-sm" id="tplEmp">⬇ Dipendenti</a>
-        <a class="btn btn-ghost btn-sm" id="tplFc">⬇ Forecast</a>
-        <a class="btn btn-ghost btn-sm" id="tplSch">⬇ Turni</a>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <span style="width:100%;font-size:.8rem;font-weight:600;color:var(--muted)">Export Excel</span>
-        <a class="btn btn-ghost btn-sm" id="expEmp">⬇ Dipendenti</a>
-        <a class="btn btn-ghost btn-sm" id="expFc">⬇ Forecast mese</a>
-        <a class="btn btn-ghost btn-sm" id="expSch">⬇ Turni mese</a>
-      </div>
-      <div class="adminonly hide" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <span style="width:100%;font-size:.8rem;font-weight:600;color:var(--muted)">Import Excel (Admin)</span>
-        <label class="btn btn-ghost btn-sm">⬆ Dipendenti<input type="file" accept=".xlsx" class="hide" onchange="doImport('employees',this)"></label>
-        <label class="btn btn-ghost btn-sm">⬆ Forecast<input type="file" accept=".xlsx" class="hide" onchange="doImport('forecast',this)"></label>
-        <label class="btn btn-ghost btn-sm">⬆ Turni<input type="file" accept=".xlsx" class="hide" onchange="doImport('schedule',this)"></label>
-        <span id="importMsg" class="text-sm text-muted"></span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <span style="width:100%;font-size:.8rem;font-weight:600;color:var(--muted)">Report PDF</span>
-        <a class="btn btn-ghost btn-sm" id="pdfWeek">🖨 Turni settimana</a>
-        <a class="btn btn-ghost btn-sm" id="pdfMonth">🖨 Turni mese</a>
-        <a class="btn btn-ghost btn-sm" id="pdfAbs">🖨 Assenze</a>
-        <a class="btn btn-ghost btn-sm" id="pdfDisc">🖨 Disciplinare</a>
-        <a class="btn btn-ghost btn-sm" id="pdfFc">🖨 Forecast</a>
-      </div>
-    </div>
-
-    <!-- Reports -->
-    <div class="card card-pad mt-4" id="reportCard"></div>
-    <div class="card card-pad mt-4 hide" id="auditWrap">
-      <div class="section-title mb-2">Registro modifiche</div>
-      <div style="overflow-x:auto"><table class="table" id="auditTbl"></table></div>
-    </div>
-  </section>
-
-  <!-- ── USERS SECTION ───────────────────────────────────── -->
-  <section id="sec-users" class="hide adminonly">
-    <div class="page-header"><div class="page-title">👥 Team & Utenti</div></div>
-    <div class="card card-pad" style="margin-bottom:16px">
-      <p class="text-muted mb-2" style="font-size:.85rem">Crea account per i team leader. Username non distingue maiuscole/minuscole.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end">
-        <div class="form-group"><label>Username</label><input id="nuUser" class="input" autocapitalize="off"></div>
-        <div class="form-group"><label>Password</label><input id="nuPass" class="input" type="text"></div>
-        <div class="form-group"><label>Nome completo</label><input id="nuName" class="input"></div>
-        <div class="form-group"><label>Ruolo</label>
-          <select id="nuRole" class="select">
-            <option value="team_leader">Team Leader</option>
-            <option value="osm">OSM</option>
-            <option value="hr_manager">HR Manager</option>
-            <option value="admin">Admin</option>
-          </select>
+        <!-- Row 2: forecast / expiry / attendance -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px" id="row2">
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">🎯 Forecast vs Pianificato</span>
+              <span class="badge b-muted" id="fcBadge">—</span>
+            </div>
+            <div id="fcContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">📋 Contratti in scadenza</span>
+            </div>
+            <div id="expiryContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">👁 Presenza oggi</span>
+            </div>
+            <div id="attContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
         </div>
-        <div class="form-group"><label>Filiali</label><select id="nuBranches" class="select" multiple size="3"></select></div>
-        <div><button class="btn btn-primary btn-block" onclick="createUser()">+ Crea account</button></div>
-      </div>
-      <div id="nuMsg" class="text-sm mt-2"></div>
-    </div>
-    <div class="card card-pad">
-      <div style="overflow-x:auto"><table class="table" id="usersTbl"></table></div>
-    </div>
-  </section>
 
-</main>
-</div>
+        <!-- DSP table -->
+        <div class="card cp mb-4">
+          <div class="section-head">
+            <span class="section-title">🚚 Operatività per filiale</span>
+            <span class="text-xs text-muted">Dati unificati scheduler + HR</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="tbl" id="dspTbl">
+              <thead><tr><th>Filiale</th><th>Driver totali</th><th>In turno</th><th>Copertura</th></tr></thead>
+              <tbody><tr><td colspan="4"><div class="skel" style="height:22px;border-radius:6px"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
 
-<!-- Modals -->
-<div id="modal-newEmployee" class="modal-backdrop hide">
-  <div class="modal">
-    <div class="modal-header"><h3>➕ Nuovo dipendente</h3><button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('newEmployee')">✕</button></div>
-    <div class="modal-body" style="display:grid;gap:10px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label>Nome</label><input id="mEmpFirst" class="input"></div>
-        <div class="form-group"><label>Cognome</label><input id="mEmpLast" class="input"></div>
-      </div>
-      <div class="form-group"><label>Transporter ID</label><input id="mEmpTrans" class="input"></div>
-      <div class="form-group"><label>Filiale</label><select id="mEmpBranch" class="select"></select></div>
-      <div class="form-group"><label>Tipo contratto</label><select id="mEmpContract" class="select"></select></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('newEmployee')">Annulla</button>
-      <button class="btn btn-primary" onclick="submitNewEmployee()">Salva</button>
-    </div>
-  </div>
-</div>
+        <!-- Expiry alerts -->
+        <div class="card cp mb-4">
+          <div class="section-head">
+            <span class="section-title">⏰ Scadenze prossime (60 gg)</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="tbl" id="alertsTbl">
+              <thead><tr><th>Dipendente</th><th>Tipo</th><th>Scadenza</th><th>Giorni</th><th>Stato</th></tr></thead>
+              <tbody><tr><td colspan="5"><div class="skel" style="height:22px;border-radius:6px"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-<div id="modal-newAbsence" class="modal-backdrop hide">
-  <div class="modal">
-    <div class="modal-header"><h3>🏥 Registra assenza</h3><button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('newAbsence')">✕</button></div>
-    <div class="modal-body" style="display:grid;gap:10px">
-      <div class="form-group"><label>Dipendente</label><input id="mAbsSearch" class="input" placeholder="Cerca nome…" oninput="searchEmpForAbsence(this.value)"><div id="mAbsResults" style="max-height:140px;overflow-y:auto;border:1px solid var(--line2);border-radius:8px;display:none"></div></div>
-      <input type="hidden" id="mAbsEmpId">
-      <div class="form-group"><label>Tipo</label>
-        <select id="mAbsType" class="select">
-          <option value="sick_leave">Malattia</option>
-          <option value="vacation">Ferie</option>
-          <option value="medical_leave">Permesso medico</option>
-          <option value="training">Formazione</option>
-          <option value="other">Altro</option>
-        </select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label>Da</label><input id="mAbsFrom" type="date" class="input"></div>
-        <div class="form-group"><label>A</label><input id="mAbsTo" type="date" class="input"></div>
-      </div>
-      <div class="form-group"><label>Note</label><textarea id="mAbsNote" class="input textarea" rows="2"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('newAbsence')">Annulla</button>
-      <button class="btn btn-primary" onclick="submitNewAbsence()">Salva</button>
-    </div>
-  </div>
-</div>
+      <!-- ══ CHARTS ════════════════════════════════════════════ -->
+      <section id="sec-charts" class="hide">
+        <div class="page-head"><div class="page-title">📈 Analytics</div></div>
+        <div class="charts-grid">
+          <div class="chart-card" style="grid-column:span 2">
+            <div class="chart-title">Presenze ultimi 30 giorni</div>
+            <div style="height:200px"><canvas id="chartAtt"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Forecast vs Pianificato (30 gg)</div>
+            <div style="height:200px"><canvas id="chartFc"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Tipi di assenza (90 gg)</div>
+            <div style="height:200px"><canvas id="chartAbs"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Crescita dipendenti (12 mesi)</div>
+            <div style="height:200px"><canvas id="chartGrow"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ ACTIVITY ══════════════════════════════════════════ -->
+      <section id="sec-activity" class="hide">
+        <div class="page-head"><div class="page-title">⚡ Attività recente</div></div>
+        <div class="card cp" style="max-width:700px">
+          <div class="feed-list" id="activityList">
+            <div class="skel" style="height:44px;border-radius:8px;margin-bottom:8px"></div>
+            <div class="skel" style="height:44px;border-radius:8px;margin-bottom:8px"></div>
+            <div class="skel" style="height:44px;border-radius:8px"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ MODULES ═══════════════════════════════════════════ -->
+      <section id="sec-modules" class="hide">
+        <div class="page-head"><div class="page-title">🧩 Moduli piattaforma</div></div>
+        <div class="mod-grid">
+          <a class="mod-card" href="scheduler.html">
+            <div class="mod-icon">🗓️</div>
+            <div class="mod-title">Pianificazione turni</div>
+            <div class="mod-sub">Settimanale · mensile · multi-filiale</div>
+          </a>
+          <a class="mod-card" href="employees.html">
+            <div class="mod-icon" style="background:var(--ok-bg);color:var(--ok)">👥</div>
+            <div class="mod-title">Dipendenti</div>
+            <div class="mod-sub">Anagrafiche · contratti · stato</div>
+          </a>
+          <button class="mod-card" onclick="showSection('charts')">
+            <div class="mod-icon" style="background:var(--teal-bg);color:var(--teal)">📊</div>
+            <div class="mod-title">Analytics</div>
+            <div class="mod-sub">Forecast · presenza · trend</div>
+          </button>
+          <button class="mod-card" onclick="showSection('overview')">
+            <div class="mod-icon" style="background:var(--warn-bg);color:var(--warn)">⏰</div>
+            <div class="mod-title">Scadenze</div>
+            <div class="mod-sub">Contratti · documenti · patenti</div>
+          </button>
+          <button class="mod-card adminonly" onclick="showSection('users')">
+            <div class="mod-icon" style="background:var(--purple-bg);color:var(--purple)">🔑</div>
+            <div class="mod-title">Team &amp; Utenti</div>
+            <div class="mod-sub">Account · ruoli · filiali</div>
+          </button>
+        </div>
+
+        <!-- Excel / PDF tools -->
+        <div class="card cp mt-4">
+          <div class="section-title mb-2">📁 Strumenti Excel &amp; PDF</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px">
+            <span style="width:100%;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Template Excel</span>
+            <a class="btn btn-ghost btn-sm" id="tplEmp">⬇ Dipendenti</a>
+            <a class="btn btn-ghost btn-sm" id="tplFc">⬇ Forecast</a>
+            <a class="btn btn-ghost btn-sm" id="tplSch">⬇ Turni</a>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px">
+            <span style="width:100%;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Export Excel</span>
+            <a class="btn btn-ghost btn-sm" id="expEmp">⬇ Dipendenti</a>
+            <a class="btn btn-ghost btn-sm" id="expFc">⬇ Forecast mese</a>
+            <a class="btn btn-ghost btn-sm" id="expSch">⬇ Turni mese</a>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px">
+            <span style="width:100%;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Report PDF</span>
+            <a class="btn btn-ghost btn-sm" id="pdfWeek">🖨 Turni settimana</a>
+            <a class="btn btn-ghost btn-sm" id="pdfMonth">🖨 Turni mese</a>
+            <a class="btn btn-ghost btn-sm" id="pdfAbs">🖨 Assenze</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ USERS (admin) ═════════════════════════════════════ -->
+      <section id="sec-users" class="hide adminonly">
+        <div class="page-head"><div class="page-title">🔑 Team &amp; Utenti</div></div>
+        <div class="card cp mb-4">
+          <div class="section-title mb-2">Crea account</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end">
+            <div><label class="lbl">Username</label><input id="nuUser" class="inp" autocapitalize="off"></div>
+            <div><label class="lbl">Password</label><input id="nuPass" class="inp" type="text"></div>
+            <div><label class="lbl">Nome</label><input id="nuName" class="inp"></div>
+            <div><label class="lbl">Ruolo</label>
+              <select id="nuRole" class="sel" style="width:100%">
+                <option value="team_leader">Team Leader</option>
+                <option value="osm">OSM</option>
+                <option value="hr_manager">HR Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div><label class="lbl">Filiali</label><select id="nuBranches" class="sel" style="width:100%" multiple size="3"></select></div>
+            <div><button class="btn btn-pri w-full" onclick="createUser()">+ Crea</button></div>
+          </div>
+          <div id="nuMsg" class="text-sm mt-2"></div>
+        </div>
+        <div class="card cp">
+          <div style="overflow-x:auto"><table class="tbl" id="usersTbl"></table></div>
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /plat-content -->
+</div><!-- /plat-shell -->
 
 <script src="api.js"></script>
 <script>
-/* ─────────────────────────────────────────────────────────────
-   TurniDSP Control Center — Dashboard JS
-   ───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+   TurniDSP Dashboard — unified with platform.css
+   ───────────────────────────────────────────────────────────────── */
 
-// ── Auth guard ────────────────────────────────────────────────
-if (!(TurniApi.isLoggedIn() && TurniApi.user())) { location.replace('login.html'); }
-TurniApi.startIdleTimeout(30, () => { toast('Sessione scaduta per inattività', 'warn'); location.replace('login.html'); });
+// ── Auth guard ────────────────────────────────────────────────────
+if (!(TurniApi.isLoggedIn && TurniApi.isLoggedIn() && TurniApi.user())) {
+  location.replace('login.html');
+}
+TurniApi.startIdleTimeout && TurniApi.startIdleTimeout(30, () => {
+  toast('Sessione scaduta', 'warn'); location.replace('login.html');
+});
+const USER = TurniApi.user();
 
-const user = TurniApi.user();
+// ── Helpers ───────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const fmt = d => d ? new Date(d).toLocaleDateString('it-IT') : '—';
+const fmtTs = d => d ? new Date(d).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) : '—';
+const today = () => new Date().toISOString().slice(0,10);
 
-function doLogout() { TurniApi.logout().catch(() => {}); location.replace('login.html'); }
-
-// ── Helpers ───────────────────────────────────────────────────
-function $(id) { return document.getElementById(id); }
-function fmt(d) { return d ? new Date(d).toLocaleDateString('it-IT') : '—'; }
-function fmtTs(d) { return d ? new Date(d).toLocaleString('it-IT', { dateStyle:'short', timeStyle:'short' }) : '—'; }
-function today() { return new Date().toISOString().slice(0,10); }
-
-function toast(msg, type = '') {
+let _toastTimer = null;
+function toast(msg, type='') {
   const el = document.createElement('div');
-  el.className = 'toast' + (type ? ' ' + type : '');
+  el.className = 'toast' + (type ? ' '+type : '');
   el.textContent = msg;
   $('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  setTimeout(() => el.remove(), 3200);
 }
 
 function animateCount(el, target) {
-  const start = 0, dur = 600;
-  const t0 = performance.now();
-  const step = (t) => {
-    const p = Math.min((t - t0) / dur, 1);
-    el.textContent = Math.round(start + (target - start) * p);
-    if (p < 1) requestAnimationFrame(step);
-  };
+  const dur=600, t0=performance.now();
+  const step=t=>{ const p=Math.min((t-t0)/dur,1); el.textContent=Math.round(target*p); if(p<1)requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
 
-// ── Section navigation ────────────────────────────────────────
-const sections = ['overview', 'charts', 'activity', 'modules', 'users'];
-let currentSection = 'overview';
-
+// ── Navigation ────────────────────────────────────────────────────
+const SECTIONS = ['overview','charts','activity','modules','users'];
 function showSection(id) {
-  sections.forEach(s => {
-    $('sec-' + s)?.classList.toggle('hide', s !== id);
+  SECTIONS.forEach(s => $('sec-'+s)?.classList.toggle('hide', s!==id));
+  document.querySelectorAll('.nav-link').forEach(n => n.classList.toggle('active', false));
+  // mark active nav-link by content match
+  document.querySelectorAll('.nav-link, .nav-link a').forEach(n => {
+    const txt = n.textContent.toLowerCase();
+    const match = (id==='overview'&&txt.includes('overview')) ||
+                  (id==='charts'&&txt.includes('analytics')) ||
+                  (id==='activity'&&txt.includes('attività')) ||
+                  (id==='modules'&&txt.includes('moduli')) ||
+                  (id==='users'&&txt.includes('utenti'));
+    if(match) n.classList.add('active');
   });
-  document.querySelectorAll('.nav-item').forEach(n => {
-    n.classList.toggle('active', n.textContent.trim().toLowerCase().includes(id) ||
-      (id === 'overview' && n.textContent.includes('Overview')) ||
-      (id === 'charts' && n.textContent.includes('Analytics')) ||
-      (id === 'activity' && n.textContent.includes('Attività')) ||
-      (id === 'modules' && n.textContent.includes('Moduli')) ||
-      (id === 'users' && n.textContent.includes('Utenti'))
-    );
-  });
-  currentSection = id;
-  if (id === 'charts')   renderCharts();
-  if (id === 'activity') renderActivity();
-  if (id === 'users')    loadUsers();
+  if(id==='charts')   renderCharts();
+  if(id==='activity') renderActivity();
+  if(id==='users')    loadUsers();
 }
 
-// ── Init ──────────────────────────────────────────────────────
-$('who').textContent = (user.full_name || user.username) + ' · ' + roleLabel(user.role);
-
-// show admin-only elements
-if (user.role === 'admin') {
-  document.querySelectorAll('.adminonly').forEach(el => el.classList.remove('hide'));
+// ── Init sidebar user info ────────────────────────────────────────
+function initSidebarUser() {
+  const name = USER.full_name || USER.username || '—';
+  const initials = name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+  $('navAvatar').textContent = initials;
+  $('navUname').textContent  = name;
+  $('navRole').textContent   = { admin:'Amministratore', osm:'OSM', hr_manager:'HR Manager', team_leader:'Team Leader' }[USER.role] || USER.role;
+  if(USER.role==='admin') document.body.classList.add('is-admin');
 }
 
-function roleLabel(r) {
-  return { admin:'Admin', osm:'OSM', hr_manager:'HR Manager', team_leader:'Team Leader' }[r] || r;
+function doLogout() { TurniApi.logout().catch(()=>{}); location.replace('login.html'); }
+
+// ── Greeting ──────────────────────────────────────────────────────
+function setGreeting() {
+  const h = new Date().getHours();
+  const g = h<12?'Buongiorno':h<18?'Buon pomeriggio':'Buonasera';
+  $('pageTitle').textContent = g + ', ' + (USER.full_name||USER.username);
+  $('pageSub').textContent = new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 
-// date picker defaults to today
-$('kpiDate').value = today();
-$('kpiDate').addEventListener('change', refreshAll);
-$('dspDateLabel').textContent = fmt(today());
+// ── Data loading ──────────────────────────────────────────────────
+let _kpiData=null, _branches=[], _charts={};
 
-let _kpiData = null, _branches = [], _contractTypes = [];
-
-// ── Load branches for selectors ───────────────────────────────
 async function initBranches() {
   try {
     _branches = await TurniApi.branches();
     const sel = $('branchSel');
     sel.innerHTML = '<option value="">Tutte le filiali</option>' +
-      _branches.map(b => `<option value="${b.code}">${b.code}</option>`).join('');
+      _branches.map(b=>`<option value="${esc(b.code)}">${esc(b.code)}</option>`).join('');
     sel.addEventListener('change', refreshAll);
 
-    // Modal: employee branch select
-    const mBranch = $('mEmpBranch');
-    if (mBranch) mBranch.innerHTML = _branches.map(b => `<option value="${b.id}">${b.code} — ${b.name}</option>`).join('');
-
-    // Users section branch multiselect
     const nuBranches = $('nuBranches');
-    if (nuBranches) nuBranches.innerHTML = _branches.map(b => `<option value="${b.id}">${b.code} — ${b.name}</option>`).join('');
-  } catch (e) { console.error('branches init:', e.message); }
+    if(nuBranches) nuBranches.innerHTML = _branches.map(b=>`<option value="${b.id}">${esc(b.code)} — ${esc(b.name)}</option>`).join('');
+  } catch(e) { console.error('branches:', e.message); }
 }
 
-async function initContractTypes() {
-  try {
-    _contractTypes = await TurniApi.contractTypes();
-    const sel = $('mEmpContract');
-    if (sel) sel.innerHTML = _contractTypes.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
-  } catch {}
-}
-
-// ── Greeting ─────────────────────────────────────────────────
-function setGreeting() {
-  const h = new Date().getHours();
-  const g = h < 12 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera';
-  $('greetTitle').textContent = `${g}, ${user.full_name || user.username}`;
-  $('greetSub').textContent = 'Dashboard operativa — ' + new Date().toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
-}
-
-// ── Main data refresh ─────────────────────────────────────────
 async function refreshAll() {
-  const date = $('kpiDate').value || today();
+  const date   = $('kpiDate').value || today();
   const branch = $('branchSel').value || undefined;
   $('dspDateLabel').textContent = fmt(date);
-  $('fcDateBadge').textContent = fmt(date);
+  $('fcBadge').textContent = fmt(date);
 
   try {
-    _kpiData = await TurniApi.kpi({ date, ...(branch ? { branch } : {}) });
+    _kpiData = await TurniApi.kpi({ date, ...(branch?{branch}:{}) });
     renderKPIs(_kpiData);
     renderForecastCard(_kpiData);
     renderExpiryCard(_kpiData);
     renderAttendanceCard(_kpiData);
-  } catch (e) { toast('Errore KPI: ' + e.message, 'bad'); console.error(e); }
+    renderDSP(_kpiData);
+  } catch(e) { toast('Errore KPI: '+e.message,'bad'); console.error(e); }
 
-  loadDSP(date, branch);
   loadAlerts();
-  if (currentSection === 'charts')   renderCharts();
-  if (currentSection === 'activity') renderActivity();
+  if(document.getElementById('sec-charts') && !document.getElementById('sec-charts').classList.contains('hide')) renderCharts();
+  if(document.getElementById('sec-activity') && !document.getElementById('sec-activity').classList.contains('hide')) renderActivity();
 }
 
-// ── KPI Cards ─────────────────────────────────────────────────
+// ── KPI Cards ─────────────────────────────────────────────────────
 function renderKPIs(d) {
-  const drivers  = d.drivers  || {};
-  const fc       = d.forecast  || {};
-  const att      = d.attendance || {};
-  const expiry   = d.contracts  || {};
+  const dr  = d.drivers   || {};
+  const fc  = d.forecast  || {};
+  const att = d.attendance || {};
+  const ex  = d.contracts  || {};
 
-  const presentPct = drivers.total ? Math.round(drivers.present / drivers.total * 100) : 0;
-  const fcDeltaOk  = fc.delta >= 0;
-  const expiryBad  = (expiry.in_7 || 0) + (expiry.expired || 0);
+  const pct = dr.total ? Math.round(dr.present/dr.total*100) : 0;
+  const fcOk = fc.delta >= 0;
+  const exBad = (ex.in_7||0)+(ex.expired||0);
 
   const cards = [
-    {
-      cls:'pri', icon:'👷', label:'Driver totali attivi',
-      value: drivers.total || 0,
-      subs: [
-        { label:'Presenti', val: drivers.present || 0 },
-        { label:'Assenti',  val: drivers.absent   || 0 },
-        { label:'In ferie', val: drivers.on_leave || 0 },
-      ],
-      bar: presentPct, barColor:'var(--pri)',
-      delta: presentPct + '% presenti',
-    },
-    {
-      cls: fcDeltaOk ? 'ok' : 'bad', icon:'🎯', label:'Forecast vs Planned',
-      value: fc.planned || 0,
-      subs: [
-        { label:'Forecast', val: fc.forecast || 0 },
-        { label:'Delta',    val: (fc.delta > 0 ? '+' : '') + (fc.delta || 0) },
-      ],
-      delta: (fc.delta_pct > 0 ? '▲' : fc.delta_pct < 0 ? '▼' : '—') + ' ' + Math.abs(fc.delta_pct || 0) + '%',
-      deltaClass: fcDeltaOk ? 'text-ok' : 'text-bad',
-    },
-    {
-      cls: expiryBad > 0 ? 'warn' : 'ok', icon:'📋', label:'Contratti in scadenza',
-      value: (expiry.in_30 || 0),
-      subs: [
-        { label:'Scaduti',  val: expiry.expired || 0 },
-        { label:'7 giorni', val: expiry.in_7    || 0 },
-        { label:'15 giorni',val: expiry.in_15   || 0 },
-      ],
-      delta: '30 giorni',
-    },
-    {
-      cls:'teal', icon:'🏥', label:'Assenze oggi',
-      value: (att.absent || 0) + (att.medical || 0) + (att.vacation || 0),
-      subs: [
-        { label:'Malattia', val: att.medical  || 0 },
-        { label:'Ferie',    val: att.vacation || 0 },
-        { label:'Assenti',  val: att.absent   || 0 },
-      ],
-      delta: (att.training || 0) > 0 ? att.training + ' in formazione' : '',
-    },
+    { cls:'pri',  icon:'👷', label:'Driver totali',
+      value: dr.total||0,
+      subs: [{l:'Presenti',v:dr.present||0},{l:'Assenti',v:dr.absent||0},{l:'In riposo',v:dr.on_leave||0}],
+      bar: pct, barColor:'var(--brand)', delta: pct+'% presenti' },
+    { cls: fcOk?'ok':'bad', icon:'🎯', label:'Forecast vs Pianificato',
+      value: fc.planned||0,
+      subs: [{l:'Forecast',v:fc.forecast||0},{l:'Delta',v:(fc.delta>0?'+':'')+(fc.delta||0)}],
+      delta: (fc.delta_pct>0?'▲':'▼')+' '+Math.abs(fc.delta_pct||0)+'%',
+      deltaOk: fcOk },
+    { cls: exBad>0?'warn':'ok', icon:'📋', label:'Contratti in scadenza',
+      value: ex.in_30||0,
+      subs: [{l:'Scaduti',v:ex.expired||0},{l:'7 gg',v:ex.in_7||0},{l:'15 gg',v:ex.in_15||0}],
+      delta: '30 giorni' },
+    { cls:'teal', icon:'🏥', label:'Assenze oggi',
+      value: (att.absent||0)+(att.medical||0)+(att.vacation||0),
+      subs: [{l:'Malattia',v:att.medical||0},{l:'Ferie',v:att.vacation||0},{l:'Assenti',v:att.absent||0}],
+      delta: (att.training||0)>0 ? att.training+' in formazione' : '' },
   ];
 
-  const grid = $('kpiGrid');
-  grid.innerHTML = cards.map((c, i) => `
-    <div class="kpi-card ${c.cls} animate-in animate-in-delay-${i}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div class="kpi-icon">${c.icon}</div>
-        ${c.deltaClass ? `<span class="text-xs ${c.deltaClass}">${c.delta}</span>` : ''}
-      </div>
-      <div class="kpi-value" data-target="${c.value}">${c.value}</div>
+  $('kpiGrid').innerHTML = cards.map((c,i)=>`
+    <div class="kpi-card ${c.cls} fade-in fade-in-${i}">
+      <div class="kpi-icon">${c.icon}</div>
+      <div class="kpi-val" data-target="${c.value}">${c.value}</div>
       <div class="kpi-label">${c.label}</div>
-      <div class="kpi-sub">
-        ${c.subs.map(s => `<div class="kpi-sub-item"><span>${s.label}</span><span>${s.val}</span></div>`).join('')}
+      <div class="kpi-subs">
+        ${c.subs.map(s=>`<div class="kpi-sub"><span class="sl">${s.l}</span><span class="sv">${s.v}</span></div>`).join('')}
       </div>
-      ${c.bar !== undefined ? `
-        <div class="kpi-bar progress-wrap"><div class="progress-bar" style="width:${c.bar}%;background:${c.barColor}"></div></div>
-      ` : ''}
-      ${c.delta && !c.deltaClass ? `<div class="kpi-delta text-muted">${c.delta}</div>` : ''}
-    </div>
-  `).join('');
+      ${c.bar!==undefined?`<div class="kpi-bar"><div class="kpi-fill" style="width:${c.bar}%;background:${c.barColor}"></div></div>`:''}
+      ${c.delta?`<div class="text-xs text-muted mt-2">${c.delta}</div>`:''}
+    </div>`).join('');
 
-  // animate counts
-  grid.querySelectorAll('.kpi-value').forEach(el => {
-    const t = +el.dataset.target;
-    animateCount(el, t);
+  $('kpiGrid').querySelectorAll('.kpi-val').forEach(el => {
+    const t = +el.dataset.target; if(t) animateCount(el, t);
   });
 }
 
-// ── Forecast card ─────────────────────────────────────────────
 function renderForecastCard(d) {
-  const fc = d.forecast || {};
-  const ok = fc.delta >= 0;
+  const fc = d.forecast||{};
+  const ok = fc.delta>=0;
+  const pct = fc.forecast ? Math.min(100, Math.round(fc.planned/fc.forecast*100)) : 0;
   $('fcContent').innerHTML = `
-    <div style="display:flex;gap:16px;margin-bottom:10px">
-      <div><div class="text-xs text-muted">Forecast</div><div style="font-size:1.8rem;font-weight:800">${fc.forecast || 0}</div></div>
-      <div><div class="text-xs text-muted">Pianificati</div><div style="font-size:1.8rem;font-weight:800">${fc.planned || 0}</div></div>
-      <div><div class="text-xs text-muted">Delta</div><div style="font-size:1.8rem;font-weight:800;color:${ok ? 'var(--ok)' : 'var(--bad)'}">${fc.delta > 0 ? '+' : ''}${fc.delta || 0}</div></div>
+    <div class="flex gap-4" style="margin-bottom:10px">
+      <div><div class="text-xs text-muted">Forecast</div><div style="font-size:1.6rem;font-weight:800">${fc.forecast||0}</div></div>
+      <div><div class="text-xs text-muted">Pianificati</div><div style="font-size:1.6rem;font-weight:800">${fc.planned||0}</div></div>
+      <div><div class="text-xs text-muted">Delta</div><div style="font-size:1.6rem;font-weight:800;color:${ok?'var(--ok)':'var(--bad)'}">${fc.delta>0?'+':''}${fc.delta||0}</div></div>
     </div>
-    <div class="progress-wrap" style="height:8px">
-      <div class="progress-bar" style="width:${Math.min(100, fc.forecast ? Math.round(fc.planned / fc.forecast * 100) : 0)}%;background:${ok ? 'var(--ok)' : 'var(--bad)'}"></div>
-    </div>
-    <div class="text-xs text-muted mt-2">${fc.delta_pct || 0}% rispetto al forecast</div>
-  `;
+    <div class="prog-wrap" style="height:7px"><div class="prog-bar" style="width:${pct}%;background:${ok?'var(--ok)':'var(--bad)'}"></div></div>
+    <div class="text-xs text-muted mt-2">${pct}% rispetto al forecast</div>`;
 }
 
-// ── Expiry card ───────────────────────────────────────────────
 function renderExpiryCard(d) {
-  const ex = d.contracts || {};
-  $('expiryContent').innerHTML = `
-    <div class="expiry-row"><div class="expiry-num" style="color:var(--bad)">${ex.expired || 0}</div><div><div class="font-semi text-sm">Scaduti</div><div class="text-xs text-muted">Da rinnovare urgentemente</div></div></div>
-    <div class="expiry-row"><div class="expiry-num" style="color:var(--bad)">${ex.in_7 || 0}</div><div><div class="font-semi text-sm">Entro 7 giorni</div><div class="text-xs text-muted">Attenzione immediata</div></div></div>
-    <div class="expiry-row"><div class="expiry-num" style="color:var(--warn)">${ex.in_15 || 0}</div><div><div class="font-semi text-sm">Entro 15 giorni</div><div class="text-xs text-muted">In scadenza imminente</div></div></div>
-    <div class="expiry-row"><div class="expiry-num" style="color:var(--muted)">${ex.in_30 || 0}</div><div><div class="font-semi text-sm">Entro 30 giorni</div><div class="text-xs text-muted">Pianifica il rinnovo</div></div></div>
-  `;
+  const ex = d.contracts||{};
+  $('expiryContent').innerHTML = [
+    [ex.expired||0,'Scaduti','bad'],
+    [ex.in_7||0,'Entro 7 giorni','bad'],
+    [ex.in_15||0,'Entro 15 giorni','warn'],
+    [ex.in_30||0,'Entro 30 giorni','muted'],
+  ].map(([n,l,c])=>`<div class="dash-expiry-row">
+    <div class="dash-expiry-num" style="color:var(--${c==='bad'?'bad':c==='warn'?'warn':'muted'})">${n}</div>
+    <div><div class="font-semi text-sm">${l}</div></div>
+  </div>`).join('');
 }
 
-// ── Attendance card ───────────────────────────────────────────
 function renderAttendanceCard(d) {
-  const a = d.attendance || {};
-  const total = (a.present||0) + (a.absent||0) + (a.medical||0) + (a.vacation||0) + (a.training||0);
-  const pct = n => total ? Math.round(n / total * 100) : 0;
-  const row = (label, val, color) => `
-    <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-      <div class="text-sm" style="width:90px;color:var(--muted)">${label}</div>
-      <div class="progress-wrap flex-1" style="height:8px">
-        <div class="progress-bar" style="width:${pct(val)}%;background:${color}"></div>
-      </div>
-      <div class="text-sm font-semi" style="width:32px;text-align:right">${val}</div>
+  const a = d.attendance||{};
+  const tot = (a.present||0)+(a.absent||0)+(a.medical||0)+(a.vacation||0)+(a.training||0)||1;
+  const pct = n => Math.round(n/tot*100);
+  const row = (label,val,color) => `
+    <div class="dash-presence-row">
+      <div class="dash-pl">${label}</div>
+      <div class="prog-wrap flex-1" style="height:7px"><div class="prog-bar" style="width:${pct(val)}%;background:${color}"></div></div>
+      <div class="text-sm font-semi" style="width:28px;text-align:right">${val}</div>
     </div>`;
   $('attContent').innerHTML = [
-    row('Presenti',  a.present  || 0, 'var(--ok)'),
-    row('Assenti',   a.absent   || 0, 'var(--bad)'),
-    row('Malattia',  a.medical  || 0, 'var(--warn)'),
-    row('Ferie',     a.vacation || 0, 'var(--pri)'),
-    row('Formazione',a.training || 0, 'var(--teal)'),
+    row('Presenti',    a.present||0,  'var(--ok)'),
+    row('Assenti',     a.absent||0,   'var(--bad)'),
+    row('Malattia',    a.medical||0,  'var(--warn)'),
+    row('Ferie',       a.vacation||0, 'var(--brand)'),
+    row('Formazione',  a.training||0, 'var(--teal)'),
   ].join('');
 }
 
-// ── DSP Operations table ──────────────────────────────────────
-async function loadDSP(date, branch) {
-  try {
-    const data = await TurniApi.dspDashboard(date, branch);
-    const tbody = $('dspTbl').querySelector('tbody');
-    if (!data.by_service?.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Nessun dato per questa data</td></tr>'; return; }
-    tbody.innerHTML = data.by_service.map(r => {
-      const ok = r.delta >= 0;
-      const cov = r.coverage_pct !== null ? r.coverage_pct + '%' : '—';
-      return `<tr>
-        <td><b>${r.service || '—'}</b></td>
-        <td>${r.forecast}</td>
-        <td>${r.planned}</td>
-        <td class="${ok ? 'text-ok' : 'text-bad'} font-semi">${r.delta > 0 ? '+' : ''}${r.delta}</td>
-        <td>
-          <div style="display:flex;align-items:center;gap:6px">
-            <div class="progress-wrap" style="height:6px;width:80px">
-              <div class="progress-bar" style="width:${Math.min(100, r.coverage_pct || 0)}%;background:${ok ? 'var(--ok)' : 'var(--bad)'}"></div>
-            </div>
-            <span class="text-sm">${cov}</span>
+function renderDSP(kpiData) {
+  const tbody = $('dspTbl').querySelector('tbody');
+  const dsp = kpiData?.dsp;
+  if(!dsp||!dsp.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-muted" style="padding:16px;text-align:center">Nessun dato — aggiungi DAS nello Scheduler</td></tr>';
+    return;
+  }
+  let totD=0,totP=0;
+  tbody.innerHTML = dsp.map(r=>{
+    totD+=(r.drivers||0); totP+=(r.present||0);
+    const cov = r.drivers>0 ? Math.round(r.present/r.drivers*100) : 0;
+    return `<tr>
+      <td><b>${esc(r.branch_code||'—')}</b></td>
+      <td>${r.drivers||0}</td>
+      <td class="text-ok font-semi">${r.present||0}</td>
+      <td>
+        <div class="flex items-center gap-2">
+          <div class="prog-wrap" style="height:6px;width:70px">
+            <div class="prog-bar" style="width:${cov}%;background:${cov>=80?'var(--ok)':cov>=50?'var(--warn)':'var(--bad)'}"></div>
           </div>
-        </td>
-      </tr>`;
-    }).join('') +
-    `<tr style="border-top:2px solid var(--line)">
-      <td><b>Totale</b></td><td><b>${data.totals.forecast}</b></td><td><b>${data.totals.planned}</b></td>
-      <td class="${data.totals.delta >= 0 ? 'text-ok' : 'text-bad'} font-semi">${data.totals.delta > 0 ? '+' : ''}${data.totals.delta}</td>
-      <td><b>${data.totals.coverage_pct !== null ? data.totals.coverage_pct + '%' : '—'}</b></td>
+          <span class="text-xs">${cov}%</span>
+        </div>
+      </td>
     </tr>`;
-  } catch (e) { $('dspTbl').querySelector('tbody').innerHTML = `<tr><td colspan="5" class="text-muted">${e.message}</td></tr>`; }
+  }).join('') + `<tr style="border-top:2px solid var(--line)">
+    <td><b>Totale</b></td><td><b>${totD}</b></td>
+    <td class="text-ok font-semi"><b>${totP}</b></td>
+    <td><b>${totD>0?Math.round(totP/totD*100):0}%</b></td>
+  </tr>`;
 }
 
-// ── Alerts table ──────────────────────────────────────────────
 async function loadAlerts() {
   try {
     const rows = await TurniApi.expiryAlerts(60);
     const tbody = $('alertsTbl').querySelector('tbody');
-    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Nessuna scadenza</td></tr>'; return; }
-    tbody.innerHTML = rows.slice(0, 30).map(r => `
-      <tr>
-        <td><b>${r.full_name || '—'}</b></td>
-        <td>${r.alert_type || '—'}</td>
-        <td>${fmt(r.expiry_date)}</td>
-        <td>${r.days_left < 0 ? 'Scaduto' : r.days_left + ' gg'}</td>
-        <td><span class="badge badge-${r.level === 'overdue' ? 'bad' : r.level === 'critical' ? 'bad' : r.level === 'warning' ? 'warn' : 'pri'}">${r.level}</span></td>
-      </tr>`).join('');
-  } catch (e) { $('alertsTbl').querySelector('tbody').innerHTML = `<tr><td colspan="5" class="text-muted">${e.message}</td></tr>`; }
+    if(!rows.length) { tbody.innerHTML='<tr><td colspan="5" class="text-muted" style="padding:12px;text-align:center">Nessuna scadenza nei prossimi 60 giorni</td></tr>'; return; }
+    tbody.innerHTML = rows.slice(0,25).map(r=>`<tr>
+      <td><b>${esc(r.full_name||'—')}</b></td>
+      <td>${esc(r.alert_type||'—')}</td>
+      <td>${fmt(r.expiry_date)}</td>
+      <td>${r.days_left<0?'Scaduto':r.days_left+' gg'}</td>
+      <td><span class="badge ${r.level==='overdue'||r.level==='critical'?'b-bad':r.level==='warning'?'b-warn':'b-pri'}">${esc(r.level)}</span></td>
+    </tr>`).join('');
+  } catch(e) { $('alertsTbl').querySelector('tbody').innerHTML=`<tr><td colspan="5" class="text-muted">${esc(e.message)}</td></tr>`; }
 }
 
-// ── Activity feed ─────────────────────────────────────────────
+// ── Activity feed ─────────────────────────────────────────────────
 async function renderActivity() {
+  const icons = {create:'➕',update:'✏️',delete:'🗑',login:'🔐',logout:'🚪'};
+  const colors = {create:'var(--ok-bg)',update:'var(--brand-lt)',delete:'var(--bad-bg)',login:'var(--teal-bg)'};
   try {
-    const data = _kpiData?.activity || await TurniApi.audit({ limit: 20 });
-    const iconMap = { create:'➕', update:'✏️', delete:'🗑', login:'🔐', logout:'🚪', default:'⚡' };
-    const colorMap = { create:'bg-ok', update:'bg-pri', delete:'bg-bad', login:'bg-teal', logout:'bg-purple', default:'bg-teal' };
-    $('activityList').innerHTML = (data || []).map(r => {
-      const action = r.action || 'default';
-      const ic = iconMap[action] || iconMap.default;
-      const cc = colorMap[action] || colorMap.default;
-      return `
-        <div class="activity-item">
-          <div class="activity-icon ${cc}">${ic}</div>
-          <div class="activity-body">
-            <div class="activity-text">${r.detail || (r.entity + ' · ' + r.action)}</div>
-            <div class="activity-meta">${r.username || '—'} &nbsp;·&nbsp; ${fmtTs(r.ts)}</div>
-          </div>
-        </div>`;
-    }).join('') || '<div class="text-muted text-sm">Nessuna attività recente</div>';
-  } catch (e) { $('activityList').innerHTML = `<div class="text-muted text-sm">${e.message}</div>`; }
+    const data = _kpiData?.activity || await TurniApi.audit({limit:20});
+    $('activityList').innerHTML = (data||[]).map(r=>{
+      const a = r.action||'';
+      return `<div class="feed-item">
+        <div class="feed-icon" style="background:${colors[a]||'var(--bg2)'}">${icons[a]||'⚡'}</div>
+        <div><div class="feed-text">${esc(r.detail||(r.entity+' · '+r.action))}</div>
+        <div class="feed-meta">${esc(r.username||'—')} · ${fmtTs(r.ts)}</div></div>
+      </div>`;
+    }).join('') || '<div class="text-muted text-sm">Nessuna attività</div>';
+  } catch(e) { $('activityList').innerHTML=`<div class="text-muted text-sm">${esc(e.message)}</div>`; }
 }
 
-// ── Charts (Chart.js) ─────────────────────────────────────────
-let _charts = {};
+// ── Charts ────────────────────────────────────────────────────────
+function destroyChart(id) { if(_charts[id]){_charts[id].destroy();delete _charts[id];} }
 
-function destroyChart(id) {
-  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
-}
-
-function chartDefaults() {
+function chartOpts() {
   return {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
-    scales: {
-      x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
-      y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 } } }
-    }
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}, tooltip:{mode:'index',intersect:false}},
+    scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}}}
   };
 }
 
 async function renderCharts() {
-  const d = _kpiData;
-  if (!d) { try { _kpiData = await TurniApi.kpi({ date: $('kpiDate').value || today() }); } catch { return; } }
-  const kd = _kpiData;
+  const d = _kpiData || await TurniApi.kpi({date:$('kpiDate').value||today()}).catch(()=>null);
+  if(!d) return;
 
-  // Attendance trend
-  destroyChart('chartAttendance');
-  const attData = kd.attendance_trend || [];
-  if (attData.length) {
-    _charts.chartAttendance = new Chart($('chartAttendance'), {
-      type: 'bar',
-      data: {
-        labels: attData.map(r => r.d.slice(5)),
-        datasets: [
-          { label: 'Presenti', data: attData.map(r => r.present), backgroundColor: 'rgba(5,150,105,.7)', borderRadius: 4 },
-          { label: 'Assenti',  data: attData.map(r => r.absent),  backgroundColor: 'rgba(220,38,38,.55)', borderRadius: 4 },
+  destroyChart('chartAtt');
+  if(d.attendance_trend?.length) {
+    _charts.chartAtt = new Chart($('chartAtt'), {
+      type:'bar',
+      data:{
+        labels: d.attendance_trend.map(r=>r.d.slice(5)),
+        datasets:[
+          {label:'Presenti', data:d.attendance_trend.map(r=>r.present), backgroundColor:'rgba(5,150,105,.75)', borderRadius:4},
+          {label:'Assenti',  data:d.attendance_trend.map(r=>r.absent),  backgroundColor:'rgba(220,38,38,.55)', borderRadius:4},
         ]
       },
-      options: { ...chartDefaults(), plugins: { ...chartDefaults().plugins, legend: { display: true, position: 'top', labels: { font: { size: 12 } } } } }
+      options:{...chartOpts(), plugins:{...chartOpts().plugins, legend:{display:true,position:'top',labels:{font:{size:12}}}}}
     });
   }
 
-  // Forecast trend
-  destroyChart('chartForecast');
-  const fcData = kd.forecast_trend || [];
-  if (fcData.length) {
-    _charts.chartForecast = new Chart($('chartForecast'), {
-      type: 'line',
-      data: {
-        labels: fcData.map(r => r.d.slice(5)),
-        datasets: [
-          { label: 'Forecast',   data: fcData.map(r => r.forecast), borderColor: '#2563EB', backgroundColor: 'rgba(37,99,235,.1)', tension: .4, fill: true, pointRadius: 3 },
-          { label: 'Pianificati',data: fcData.map(r => r.planned),  borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.05)', tension: .4, fill: false, pointRadius: 3 },
+  destroyChart('chartFc');
+  if(d.forecast_trend?.length) {
+    _charts.chartFc = new Chart($('chartFc'), {
+      type:'line',
+      data:{
+        labels: d.forecast_trend.map(r=>r.d.slice(5)),
+        datasets:[
+          {label:'Forecast',   data:d.forecast_trend.map(r=>r.forecast), borderColor:'var(--brand)',backgroundColor:'rgba(79,70,229,.1)',tension:.4,fill:true,pointRadius:3},
+          {label:'Pianificati',data:d.forecast_trend.map(r=>r.planned),  borderColor:'var(--ok)',   backgroundColor:'rgba(5,150,105,.05)', tension:.4,fill:false,pointRadius:3},
         ]
       },
-      options: { ...chartDefaults(), plugins: { ...chartDefaults().plugins, legend: { display: true, position: 'top', labels: { font: { size: 12 } } } } }
+      options:{...chartOpts(), plugins:{...chartOpts().plugins, legend:{display:true,position:'top',labels:{font:{size:12}}}}}
     });
   }
 
-  // Absence types donut
-  destroyChart('chartAbsence');
-  const absData = kd.absence_types || [];
-  if (absData.length) {
-    const palette = ['#2563EB','#059669','#D97706','#DC2626','#7C3AED','#0891B2','#F59E0B','#6B7280'];
-    _charts.chartAbsence = new Chart($('chartAbsence'), {
-      type: 'doughnut',
-      data: {
-        labels: absData.map(r => r.absence_type),
-        datasets: [{ data: absData.map(r => r.cnt), backgroundColor: palette, borderWidth: 0 }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'right', labels: { font: { size: 12 }, padding: 12 } } }
-      }
+  destroyChart('chartAbs');
+  if(d.absence_types?.length) {
+    const palette=['var(--brand)','var(--ok)','var(--warn)','var(--bad)','var(--purple)','var(--teal)','#F59E0B','#6B7280'];
+    _charts.chartAbs = new Chart($('chartAbs'), {
+      type:'doughnut',
+      data:{labels:d.absence_types.map(r=>r.absence_type), datasets:[{data:d.absence_types.map(r=>r.cnt), backgroundColor:palette, borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12},padding:10}}}}
     });
   }
 
-  // Employee growth bar
-  destroyChart('chartGrowth');
-  const growData = kd.employee_growth || [];
-  if (growData.length) {
-    _charts.chartGrowth = new Chart($('chartGrowth'), {
-      type: 'bar',
-      data: {
-        labels: growData.map(r => r.month),
-        datasets: [{ label: 'Nuovi dipendenti', data: growData.map(r => r.added), backgroundColor: 'rgba(37,99,235,.75)', borderRadius: 6 }]
-      },
-      options: chartDefaults()
+  destroyChart('chartGrow');
+  if(d.employee_growth?.length) {
+    _charts.chartGrow = new Chart($('chartGrow'), {
+      type:'bar',
+      data:{labels:d.employee_growth.map(r=>r.month), datasets:[{label:'Nuovi',data:d.employee_growth.map(r=>r.added),backgroundColor:'rgba(79,70,229,.75)',borderRadius:6}]},
+      options:chartOpts()
     });
   }
 }
 
-// ── Reports ───────────────────────────────────────────────────
-async function loadReportsFull() {
-  showSection('modules');
-  const from = addDays(today(), -29), to = today();
-  try {
-    const [s, acc] = await Promise.all([TurniApi.reportSummary(from, to), TurniApi.forecastAccuracy(from, to)]);
-    $('reportCard').innerHTML = `
-      <div class="section-title mb-2">📈 Report: ${fmt(from)} – ${fmt(to)}</div>
-      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
-        ${kpiMini('Giorni lavorati', s.worked_days)}
-        ${kpiMini('Giorni assenza', s.absence_days)}
-        ${kpiMini('Tasso assenze', s.absence_rate_pct + '%')}
-        ${kpiMini('Accuratezza forecast', acc.accuracy_pct !== null ? acc.accuracy_pct + '%' : '—')}
-      </div>`;
-  } catch (e) { $('reportCard').innerHTML = `<div class="text-muted text-sm">${e.message}</div>`; }
-}
-
-function kpiMini(label, value) {
-  return `<div class="card card-pad-sm"><div style="font-size:1.4rem;font-weight:800">${value}</div><div class="text-xs text-muted">${label}</div></div>`;
-}
-
-async function loadAuditFull() {
-  $('auditWrap').classList.remove('hide');
-  try {
-    const rows = await TurniApi.audit({ limit: 100 });
-    let h = '<thead><tr><th>Data</th><th>Utente</th><th>Entità</th><th>Azione</th><th>Dettaglio</th></tr></thead><tbody>';
-    for (const r of rows) h += `<tr><td>${fmtTs(r.ts)}</td><td>${r.username||''}</td><td>${r.entity||''}</td><td>${r.action||''}</td><td>${r.detail||''}</td></tr>`;
-    $('auditTbl').innerHTML = h + '</tbody>';
-  } catch (e) { $('auditTbl').innerHTML = `<tbody><tr><td colspan="5" class="text-muted">${e.message}</td></tr></tbody>`; }
-}
-
-// ── Users management ──────────────────────────────────────────
-let _branchCache = [];
-
-async function loadUsers() {
-  try {
-    if (!_branchCache.length) _branchCache = await TurniApi.branchesMeta().catch(() => []);
-    const nuBranches = $('nuBranches');
-    if (nuBranches) nuBranches.innerHTML = _branchCache.map(b => `<option value="${b.id}">${b.code} — ${b.name}</option>`).join('');
-    const rows = await TurniApi.users();
-    let h = '<thead><tr><th>Username</th><th>Nome</th><th>Ruolo</th><th>Stato</th><th>Ultimo accesso</th><th></th></tr></thead><tbody>';
-    for (const u of rows) {
-      h += `<tr>
-        <td><b>${u.username}</b></td><td>${u.full_name||''}</td><td>${roleLabel(u.role)}</td>
-        <td><span class="badge badge-${u.active ? 'ok' : 'warn'}">${u.active ? 'attivo' : 'disattivo'}</span></td>
-        <td>${u.last_login ? fmtTs(u.last_login) : '—'}</td>
-        <td style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id},${!u.active})">${u.active ? 'Disattiva' : 'Attiva'}</button>
-          <button class="btn btn-ghost btn-sm" onclick="resetPw(${u.id})">Reset pw</button>
-        </td>
-      </tr>`;
-    }
-    $('usersTbl').innerHTML = h + '</tbody>';
-  } catch (e) { $('usersTbl').innerHTML = `<tbody><tr><td class="text-muted">${e.message}</td></tr></tbody>`; }
-}
-
-async function createUser() {
-  $('nuMsg').textContent = ''; $('nuMsg').style.color = 'var(--muted)';
-  const branch_ids = Array.from($('nuBranches').selectedOptions).map(o => +o.value);
-  const payload = { username: $('nuUser').value.trim(), password: $('nuPass').value, full_name: $('nuName').value.trim(), role: $('nuRole').value, branch_ids };
-  if (!payload.username || !payload.password) { $('nuMsg').style.color = 'var(--bad)'; $('nuMsg').textContent = 'Username e password obbligatori.'; return; }
-  try {
-    await TurniApi.createUser(payload);
-    $('nuMsg').style.color = 'var(--ok)'; $('nuMsg').textContent = `Account "${payload.username}" creato.`;
-    $('nuUser').value = ''; $('nuPass').value = ''; $('nuName').value = '';
-    loadUsers();
-  } catch (e) { $('nuMsg').style.color = 'var(--bad)'; $('nuMsg').textContent = e.message; }
-}
-
-async function toggleUser(id, active) { try { await TurniApi.updateUser(id, { active }); toast(active ? 'Utente attivato' : 'Utente disattivato'); loadUsers(); } catch (e) { toast(e.message, 'bad'); } }
-async function resetPw(id) {
-  const pw = prompt('Nuova password (min 10 car, maiuscola, minuscola, numero):');
-  if (!pw) return;
-  try { await TurniApi.updateUser(id, { password: pw }); toast('Password aggiornata', 'ok'); }
-  catch (e) { toast(e.message, 'bad'); }
-}
-
-// ── Modals ────────────────────────────────────────────────────
-function openModal(id) { $('modal-' + id)?.classList.remove('hide'); }
-function closeModal(id) { $('modal-' + id)?.classList.add('hide'); }
-
-async function submitNewEmployee() {
-  const payload = {
-    first_name: $('mEmpFirst').value.trim(),
-    last_name:  $('mEmpLast').value.trim(),
-    transporter_id: $('mEmpTrans').value.trim() || undefined,
-    branch_id: +$('mEmpBranch').value || undefined,
-    contract_type_id: +$('mEmpContract').value || undefined,
-  };
-  if (!payload.first_name || !payload.last_name) { toast('Nome e cognome obbligatori', 'warn'); return; }
-  try {
-    await TurniApi.createEmployee(payload);
-    toast('Dipendente creato', 'ok');
-    closeModal('newEmployee');
-    $('mEmpFirst').value = ''; $('mEmpLast').value = ''; $('mEmpTrans').value = '';
-  } catch (e) { toast(e.message, 'bad'); }
-}
-
-let _absEmpResults = [];
-async function searchEmpForAbsence(q) {
-  if (q.length < 2) { $('mAbsResults').style.display = 'none'; return; }
-  try {
-    const r = await TurniApi.employees({ q, pageSize: 8 });
-    const rows = r.rows || r;
-    $('mAbsResults').style.display = rows.length ? 'block' : 'none';
-    $('mAbsResults').innerHTML = rows.map(e =>
-      `<div style="padding:8px 12px;cursor:pointer;font-size:.875rem;border-bottom:1px solid var(--line)"
-            onmousedown="selectAbsEmp(${e.id},'${e.first_name} ${e.last_name}')">${e.first_name} ${e.last_name}</div>`
-    ).join('');
-  } catch {}
-}
-
-function selectAbsEmp(id, name) {
-  $('mAbsEmpId').value = id;
-  $('mAbsSearch').value = name;
-  $('mAbsResults').style.display = 'none';
-}
-
-async function submitNewAbsence() {
-  const eid = $('mAbsEmpId').value;
-  if (!eid) { toast('Seleziona un dipendente', 'warn'); return; }
-  const payload = {
-    employee_id: +eid,
-    absence_type: $('mAbsType').value,
-    start_date: $('mAbsFrom').value,
-    end_date: $('mAbsTo').value || $('mAbsFrom').value,
-    note: $('mAbsNote').value || undefined,
-  };
-  if (!payload.start_date) { toast('Data inizio obbligatoria', 'warn'); return; }
-  try {
-    await TurniApi.createAbsence(payload);
-    toast('Assenza registrata', 'ok');
-    closeModal('newAbsence');
-    refreshAll();
-  } catch (e) { toast(e.message, 'bad'); }
-}
-
-// ── Excel/PDF link wiring ─────────────────────────────────────
-function wireTools() {
-  const ym = new Date().toISOString().slice(0,7);
-  const from = addDays(today(), -6);
-  $('tplEmp').href  = TurniApi.xlsxTemplateUrl('employees');
-  $('tplFc').href   = TurniApi.xlsxTemplateUrl('forecast');
-  $('tplSch').href  = TurniApi.xlsxTemplateUrl('schedule');
-  $('expEmp').href  = TurniApi.xlsxExportUrl('employees');
-  $('expFc').href   = TurniApi.xlsxExportUrl('forecast', { month: ym });
-  $('expSch').href  = TurniApi.xlsxExportUrl('schedule', { month: ym });
-  $('pdfWeek').href = TurniApi.pdfUrl('schedule/weekly', { from });
-  $('pdfMonth').href= TurniApi.pdfUrl('schedule/monthly', { month: ym });
-  $('pdfAbs').href  = TurniApi.pdfUrl('absences', { month: ym });
-  $('pdfDisc').href = TurniApi.pdfUrl('disciplinary', { month: ym });
-  $('pdfFc').href   = TurniApi.pdfUrl('forecast', { month: ym });
-}
-
-async function doImport(type, input) {
-  $('importMsg').textContent = 'Import in corso…';
-  try {
-    const r = await TurniApi.xlsxImport(type, input.files[0]);
-    $('importMsg').textContent = `Import OK: ${r.added || r.updated || '—'} righe`;
-    toast('Import completato', 'ok');
-  } catch (e) { $('importMsg').textContent = 'Errore: ' + e.message; toast(e.message, 'bad'); }
-  input.value = '';
-}
-
-function addDays(iso, n) { const d = new Date(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); }
-
-// ── Boot ──────────────────────────────────────────────────────
-// ── Global Search ──────────────────────────────────────────────
-let _searchTimer = null;
-function debouncedSearch(q) {
-  clearTimeout(_searchTimer);
-  if (!q || q.length < 2) { document.getElementById('searchDropdown').style.display='none'; return; }
-  _searchTimer = setTimeout(() => doSearch(q), 280);
-}
-
-async function doSearch(q) {
-  const dd = document.getElementById('searchDropdown');
-  dd.style.display = 'block';
-  dd.innerHTML = '<div style="padding:12px 14px;font-size:.8rem;color:var(--muted)">Ricerca…</div>';
-  try {
-    const r = await TurniApi.search(q, 15);
-    if (!r.results.length) { dd.innerHTML = '<div style="padding:12px 14px;font-size:.8rem;color:var(--muted)">Nessun risultato</div>'; return; }
-    const icons = { employee:'👤', document:'📄', absence:'🏥', default:'📌' };
-    dd.innerHTML = r.results.map(res => `
-      <a href="${res.url||'#'}" style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit;transition:background .1s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
-        <span style="font-size:1.1rem;flex-shrink:0">${icons[res.type]||icons.default}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${res.title||''}</div>
-          <div style="font-size:.75rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${res.subtitle||''}</div>
-        </div>
-        <span style="font-size:.65rem;background:var(--bg2);color:var(--muted);padding:2px 6px;border-radius:8px;white-space:nowrap">${res.type}</span>
-      </a>`).join('');
-  } catch { dd.innerHTML = '<div style="padding:12px 14px;font-size:.8rem;color:var(--bad)">Errore ricerca</div>'; }
-}
-
-// ── Notifications ──────────────────────────────────────────────
-let _notifOpen = false;
-
+// ── Notifications ─────────────────────────────────────────────────
+let _notifOpen=false;
 async function loadNotifications() {
   try {
-    const data = await TurniApi.notifications({ limit: 30 });
-    const badge = document.getElementById('notifBadge');
-    if (data.unread_count > 0) {
-      badge.style.display = 'inline-block';
-      badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
-    } else badge.style.display = 'none';
-
-    const list = document.getElementById('notifList');
-    if (!data.rows.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:.85rem;color:var(--muted)">Nessuna notifica</div>';
-      return;
-    }
-    const icons = { contract:'📋', document:'📄', schedule:'🗓', absence:'🏥', system:'⚙️', disciplinary:'⚖️' };
-    const sevColors = { critical:'var(--bad)', warning:'var(--warn)', info:'var(--pri)' };
-    list.innerHTML = data.rows.map(n => `
-      <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start;background:${n.read_at?'':'var(--pri-bg)'};cursor:pointer"
-           onclick="clickNotif(${n.id},'${n.action_url||''}')">
-        <span style="font-size:1.1rem;flex-shrink:0">${icons[n.category]||'🔔'}</span>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-weight:${n.read_at?'500':'700'};font-size:.85rem">${n.title||''}</span>
-            <span style="width:6px;height:6px;border-radius:50%;background:${sevColors[n.severity]||'var(--pri)'};flex-shrink:0"></span>
+    const data = await TurniApi.notifications({limit:30});
+    const badge=$('notifBadge');
+    if(data.unread_count>0){ badge.style.display='inline-block'; badge.textContent=data.unread_count>99?'99+':data.unread_count; }
+    else badge.style.display='none';
+    const sevColors={critical:'var(--bad)',warning:'var(--warn)',info:'var(--brand)'};
+    $('notifList').innerHTML = data.rows.length
+      ? data.rows.map(n=>`<div class="ph-notif-item${n.read_at?'':' unread'}" onclick="clickNotif(${n.id},'${esc(n.action_url||'')}')">
+          <div class="ph-notif-title">
+            <span class="ph-notif-sev-dot" style="background:${sevColors[n.severity]||'var(--brand)'}"></span>
+            ${esc(n.title||'')}
           </div>
-          ${n.body ? `<div style="font-size:.75rem;color:var(--muted);margin-top:1px">${n.body}</div>` : ''}
-          <div style="font-size:.7rem;color:var(--muted);margin-top:3px">${new Date(n.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})}</div>
-        </div>
-      </div>`).join('');
+          ${n.body?`<div class="ph-notif-body">${esc(n.body)}</div>`:''}
+          <div class="ph-notif-ts">${fmtTs(n.created_at)}</div>
+        </div>`).join('')
+      : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--muted)">Nessuna notifica</div>';
   } catch {}
 }
-
-async function clickNotif(id, url) {
-  try { await TurniApi.markRead(id); } catch {}
-  if (url) location.href = url;
-  else toggleNotifPanel();
-  loadNotifications();
+async function clickNotif(id,url) { try{await TurniApi.markRead(id);}catch{} if(url)location.href=url; else toggleNotif(); loadNotifications(); }
+async function markAllRead() { try{await TurniApi.markAllRead(); loadNotifications();}catch{} }
+function toggleNotif() {
+  _notifOpen=!_notifOpen;
+  $('notifPanel').style.display=_notifOpen?'block':'none';
+  if(_notifOpen) loadNotifications();
 }
-
-async function markAllRead() {
-  try { await TurniApi.markAllRead(); loadNotifications(); } catch {}
-}
-
-function toggleNotifPanel() {
-  const p = document.getElementById('notifPanel');
-  _notifOpen = !_notifOpen;
-  p.style.display = _notifOpen ? 'block' : 'none';
-  if (_notifOpen) loadNotifications();
-}
-
-// Close notification panel on outside click
-document.addEventListener('click', e => {
-  if (_notifOpen && !e.target.closest('#notifPanel') && !e.target.closest('[onclick*="toggleNotifPanel"]')) {
-    _notifOpen = false;
-    document.getElementById('notifPanel').style.display = 'none';
-  }
+document.addEventListener('click',e=>{
+  if(_notifOpen&&!e.target.closest('#notifPanel')&&!e.target.closest('.ph-notif-btn')){_notifOpen=false;$('notifPanel').style.display='none';}
+  if($('searchDd').style.display!=='none'&&!e.target.closest('.ph-search')) $('searchDd').style.display='none';
 });
 
+// ── Global search ─────────────────────────────────────────────────
+let _srTimer=null;
+function debouncedSearch(q) {
+  clearTimeout(_srTimer);
+  if(!q||q.length<2){$('searchDd').style.display='none';return;}
+  _srTimer=setTimeout(()=>doSearch(q),280);
+}
+async function doSearch(q) {
+  const dd=$('searchDd'); dd.style.display='block';
+  dd.innerHTML='<div class="sd-item text-muted" style="pointer-events:none">Ricerca…</div>';
+  try {
+    const r=await TurniApi.search(q,12);
+    const icons={employee:'👤',document:'📄',absence:'🏥'};
+    dd.innerHTML=r.results.length
+      ? r.results.map(x=>`<a href="${esc(x.url||'#')}" class="sd-item">
+          <span class="sd-icon">${icons[x.type]||'📌'}</span>
+          <div class="flex-1"><div class="sd-title">${esc(x.title)}</div><div class="sd-sub">${esc(x.subtitle||'')}</div></div>
+          <span class="sd-type">${x.type}</span>
+        </a>`).join('')
+      : '<div class="sd-item text-muted" style="pointer-events:none">Nessun risultato</div>';
+  } catch { dd.innerHTML='<div class="sd-item text-muted" style="pointer-events:none">Errore ricerca</div>'; }
+}
+
+// ── Users management ──────────────────────────────────────────────
+async function loadUsers() {
+  try {
+    const rows=await TurniApi.users();
+    const rl=r=>({admin:'Admin',osm:'OSM',hr_manager:'HR Manager',team_leader:'Team Leader'}[r]||r);
+    $('usersTbl').innerHTML=`<thead><tr><th>Username</th><th>Nome</th><th>Ruolo</th><th>Stato</th><th>Ultimo accesso</th><th></th></tr></thead><tbody>`+
+      rows.map(u=>`<tr>
+        <td><b>${esc(u.username)}</b></td><td>${esc(u.full_name||'')}</td>
+        <td>${rl(u.role)}</td>
+        <td><span class="badge ${u.active?'b-ok':'b-warn'}">${u.active?'attivo':'disattivo'}</span></td>
+        <td class="text-sm text-muted">${u.last_login?fmtTs(u.last_login):'—'}</td>
+        <td style="display:flex;gap:5px">
+          <button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id},${!u.active})">${u.active?'Disattiva':'Attiva'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetPw(${u.id})">Reset pw</button>
+        </td>
+      </tr>`).join('') + '</tbody>';
+  } catch(e){$('usersTbl').innerHTML=`<tbody><tr><td class="text-muted">${esc(e.message)}</td></tr></tbody>`;}
+}
+async function createUser() {
+  const $m=$('nuMsg');$m.textContent='';
+  const branch_ids=Array.from($('nuBranches').selectedOptions).map(o=>+o.value);
+  const payload={username:$('nuUser').value.trim(),password:$('nuPass').value,full_name:$('nuName').value.trim(),role:$('nuRole').value,branch_ids};
+  if(!payload.username||!payload.password){$m.style.color='var(--bad)';$m.textContent='Username e password obbligatori.';return;}
+  try{await TurniApi.createUser(payload);$m.style.color='var(--ok)';$m.textContent='Account creato.';$('nuUser').value='';$('nuPass').value='';$('nuName').value='';loadUsers();}
+  catch(e){$m.style.color='var(--bad)';$m.textContent=e.message;}
+}
+async function toggleUser(id,active){try{await TurniApi.updateUser(id,{active});toast(active?'Utente attivato':'Disattivato');loadUsers();}catch(e){toast(e.message,'bad');}}
+async function resetPw(id){const pw=prompt('Nuova password (min 10 car, maiusc, minusc, numero):');if(!pw)return;try{await TurniApi.updateUser(id,{password:pw});toast('Password aggiornata','ok');}catch(e){toast(e.message,'bad');}}
+
+// ── Excel/PDF links ───────────────────────────────────────────────
+function wireTools() {
+  const ym=new Date().toISOString().slice(0,7);
+  const addDays=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+  $('tplEmp').href   = TurniApi.xlsxTemplateUrl('employees');
+  $('tplFc').href    = TurniApi.xlsxTemplateUrl('forecast');
+  $('tplSch').href   = TurniApi.xlsxTemplateUrl('schedule');
+  $('expEmp').href   = TurniApi.xlsxExportUrl('employees');
+  $('expFc').href    = TurniApi.xlsxExportUrl('forecast',{month:ym});
+  $('expSch').href   = TurniApi.xlsxExportUrl('schedule',{month:ym});
+  $('pdfWeek').href  = TurniApi.pdfUrl('schedule/weekly',{from:addDays(today(),-6)});
+  $('pdfMonth').href = TurniApi.pdfUrl('schedule/monthly',{month:ym});
+  $('pdfAbs').href   = TurniApi.pdfUrl('absences',{month:ym});
+}
+
+// ── Boot ──────────────────────────────────────────────────────────
 async function boot() {
+  initSidebarUser();
   setGreeting();
+  $('kpiDate').value = today();
+  $('kpiDate').addEventListener('change', refreshAll);
   await initBranches();
-  initContractTypes();
   wireTools();
   refreshAll();
-  // Load & refresh notifications
   loadNotifications();
-  TurniApi.refreshNotifications().catch(() => {});
-  setInterval(loadNotifications, 5 * 60 * 1000); // refresh every 5 minutes
+  TurniApi.refreshNotifications && TurniApi.refreshNotifications().catch(()=>{});
+  setInterval(loadNotifications, 5*60*1000);
+  $('navSync').textContent = '🟢 PostgreSQL';
 }
 boot();
 </script>

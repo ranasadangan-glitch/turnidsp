@@ -3,31 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TurniDSP — Scheduler</title>
+<title>TurniDSP — Piattaforma</title>
 <link rel="stylesheet" href="platform.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── SPA-specific additions ────────────────────────────────────── */
+.spa-section { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.spa-section.active { display: flex; }
+
+/* Dashboard section: scrollable page */
+#sec-dashboard { overflow-y: auto; }
+#sec-dashboard .dash-page { padding: 22px 24px; max-width: 1440px; }
+
+/* Scheduler section: fixed-height board */
+#sec-scheduler { flex-direction: column; }
+
+/* Employees / Reports / Settings: scrollable */
+#sec-employees, #sec-reports, #sec-settings { overflow-y: auto; padding: 22px 24px; }
+
+/* Animate section transitions */
+.spa-section.active { animation: fadeIn .16s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Dashboard expiry rows */
+.dash-expiry-row { display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line); }
+.dash-expiry-row:last-child { border-bottom:0; }
+.dash-expiry-num { font-size:1.5rem;font-weight:800;min-width:40px; }
+.dash-presence-row { display:flex;align-items:center;gap:8px;padding:4px 0; }
+.dash-pl { width:76px;font-size:.72rem;color:var(--muted); }
+.mod-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px; }
+.mod-card { display:flex;flex-direction:column;gap:6px;padding:15px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--card);cursor:pointer;transition:all var(--transition); }
+.mod-card:hover { border-color:var(--brand);box-shadow:0 4px 16px rgba(79,70,229,.1);transform:translateY(-2px); }
+.mod-icon { font-size:1.3rem;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--brand-lt); }
+.mod-title { font-size:.82rem;font-weight:700; }
+.mod-sub   { font-size:.7rem;color:var(--muted); }
+
+/* Notification item */
+.ph-notif-item { padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;transition:background var(--transition); }
+.ph-notif-item:hover { background:var(--bg2); }
+.ph-notif-item:last-child { border-bottom:0; }
+.ph-notif-item.unread { background:var(--brand-lt); }
+.ph-notif-title { font-size:.8rem;font-weight:600;margin-bottom:2px; }
+.ph-notif-body  { font-size:.72rem;color:var(--muted);margin-bottom:3px; }
+.ph-notif-ts    { font-size:.65rem;color:var(--muted); }
+
+/* Scheduler overlays inside SPA */
+.overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:5000;align-items:center;justify-content:center;padding:20px; }
+.overlay.on { display:flex; }
+.obox { background:var(--card);border-radius:13px;padding:22px;max-width:480px;width:100%;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto; }
+.obox h2 { font-size:.95rem;font-weight:700;margin-bottom:14px; }
+.obox-close { float:right;margin-left:8px;width:26px;height:26px;border-radius:7px;background:var(--bg2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:.82rem; }
+.obox-close:hover { background:var(--line); }
+/* Scheduler legacy styles needed for non-board views */
+.view { display:none; }.view.on { display:block; }
+.chip { display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:800; }
+.codegrp h4 { font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 5px; }
+.codegrid { display:flex;flex-wrap:wrap;gap:5px; }
+.codegrid button { padding:6px 10px;border-radius:7px;font-size:.75rem;font-weight:700;border:1.5px solid transparent;cursor:pointer;transition:all .12s; }
+.codegrid button.sel { border-color:var(--ink); }
+.c-n,.c-name { position:sticky;left:0;background:var(--card);z-index:5; }
+.c-n { min-width:38px;max-width:38px;text-align:center; }
+.c-name { min-width:180px;max-width:220px; }
+.stick { position:sticky;left:0;background:var(--card);z-index:5; }
+.gridwrap { overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r);max-height:calc(100vh - 300px); }
+table.grid { border-collapse:separate;border-spacing:0;font-size:.78rem;white-space:nowrap; }
+table.grid th { background:var(--card);position:sticky;top:0;z-index:10;border-bottom:1.5px solid var(--line);padding:7px 5px;text-align:center;min-width:44px;font-weight:700; }
+table.grid td { padding:3px 3px;border-bottom:1px solid var(--line);border-right:1px solid var(--line); }
+table.grid td.cell { text-align:center;cursor:pointer; }
+table.grid td.cell:hover { background:rgba(79,70,229,.07); }
+table.grid tr.foot td { background:var(--bg);font-size:.75rem;padding:4px 5px;text-align:center; }
+table.grid tr.foot .lbl { text-align:left;font-weight:700;color:var(--muted);font-size:.72rem;text-transform:uppercase; }
+table.grid tr.empty td { padding:24px;text-align:center;color:var(--muted);font-style:italic; }
+.neg { color:var(--bad);font-weight:700; }
+.wend { background:rgba(0,0,0,.02); }
+.today { background:rgba(79,70,229,.06); }
+.viol  { background:rgba(220,38,38,.06); }
+.heat  { display:block;height:3px;border-radius:2px;margin-top:2px; }
+.c-tot,.c-ctr { text-align:center;color:var(--muted);font-size:.72rem; }
+.weeks th { background:var(--ink);color:#fff;font-size:.72rem; }
+.banner { background:var(--warn-bg);border:1px solid var(--warn);color:#7a4a00;border-radius:var(--r);padding:9px 13px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.82rem; }
+.planhead { font-size:1rem;font-weight:700;margin-bottom:8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap; }
+.planhead small { font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em; }
+.toolbar { display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px; }
+.toolbar input[type=search] { padding:7px 10px;border:1px solid var(--line2);border-radius:8px;min-width:130px;flex:1;max-width:240px; }
+.toolbar select { padding:7px 9px;border:1px solid var(--line2);border-radius:8px;background:var(--card); }
+.btn { background:var(--ink);color:#fff;padding:7px 13px;border-radius:8px;font-weight:600;font-size:.82rem;display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:none;transition:all .14s; }
+.btn:active { transform:scale(.97); }
+.btn.ghost { background:var(--card);color:var(--ink);border:1px solid var(--line2); }
+.btn.ghost:hover { background:var(--bg2); }
+.btn.warn { background:var(--bad); }
+.btn.amber { background:#F59E0B;color:#1A1A2E; }
+.btn.ok { background:var(--ok); }
+.btn.sm { padding:5px 10px;font-size:.76rem; }
+.btn:disabled { opacity:.4;cursor:not-allowed; }
+.seg { display:inline-flex;border:1.5px solid var(--line2);border-radius:7px;overflow:hidden; }
+.seg button { padding:5px 11px;font-weight:600;font-size:.78rem;background:var(--card);color:var(--muted);transition:all .14s; }
+.seg button.on { background:var(--brand);color:#fff; }
+.seg button:hover:not(.on) { background:var(--bg2); }
+.weeknav { display:inline-flex;align-items:center;gap:4px; }
+.weeknav button { padding:5px 9px;border:1px solid var(--line2);border-radius:7px;background:var(--card);font-weight:700; }
+.weeknav span { font-weight:600;font-size:.82rem;min-width:160px;text-align:center; }
+.chartcard { background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px; }
+.chartcard h3 { font-size:.85rem;font-weight:700;margin-bottom:2px; }
+.chartcard .sub { font-size:.72rem;color:var(--muted);margin-bottom:10px; }
+.chartcard.span2 { grid-column:span 2; }
+.an-kpis { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px; }
+.an-kpi { background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;text-align:center; }
+.an-kpi .val { font-size:1.5rem;font-weight:800;color:var(--brand);margin-bottom:2px; }
+.an-kpi .lbl { font-size:.72rem;color:var(--muted);font-weight:600; }
+/* admin visibility inside SPA */
+.adminonly { display:none!important; }
+body.is-admin .adminonly { display:flex!important; }
+body.is-admin .adminonly.block { display:block!important; }
+body.is-admin .adminonly.inline-flex { display:inline-flex!important; }
+.teamonly { display:none!important; }
+body.is-team .teamonly { display:inline-flex!important; }
+</style>
 </head>
 <body>
 <div id="toast-container"></div>
 <div id="autosaveIndicator"><span id="autosaveIcon">⏳</span><span id="autosaveText">Salvataggio…</span></div>
 <div id="undoBar">
-  <button class="undo-btn" id="undoBtn" onclick="doUndo()" title="Ctrl+Z">↩ Annulla</button>
-  <button class="undo-btn" id="redoBtn" onclick="doRedo()" title="Ctrl+Shift+Z" disabled>↪ Ripeti</button>
+  <button class="undo-btn" id="undoBtn" onclick="spaDoUndo()" title="Ctrl+Z" disabled>↩ Annulla</button>
+  <button class="undo-btn" id="redoBtn" onclick="spaDoRedo()" title="Ctrl+Shift+Z" disabled>↪ Ripeti</button>
 </div>
 <div id="kbdHint"></div>
 
-<!-- Context menu -->
-<div id="ctxMenu">
-  <div class="ctx-item" onclick="ctxAction('edit')">✏️ Modifica</div>
-  <div class="ctx-item" onclick="ctxAction('copy')">📋 Copia</div>
-  <div class="ctx-item" id="ctx-paste" onclick="ctxAction('paste')">📌 Incolla</div>
-  <div class="ctx-item" onclick="ctxAction('duplicate')">⊕ Duplica settimana</div>
-  <div class="ctx-sep"></div>
-  <div class="ctx-item danger" onclick="ctxAction('delete')">🗑 Svuota</div>
+<!-- Context menu (scheduler) -->
+<div id="ctxMenu" style="position:fixed;z-index:700;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);padding:5px 0;min-width:155px;display:none">
+  <div style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .14s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('edit')">✏️ Modifica</div>
+  <div style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .14s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('copy')">📋 Copia</div>
+  <div id="ctx-paste" style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .14s;display:none" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('paste')">📌 Incolla</div>
+  <div style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .14s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('duplicate')">⊕ Duplica settimana</div>
+  <div style="height:1px;background:var(--line);margin:4px 0"></div>
+  <div style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--bad);transition:background .14s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('delete')">🗑 Svuota</div>
 </div>
 
+<!-- ════════════════════════════════════════
+     APP SHELL
+     ════════════════════════════════════════ -->
 <div class="plat-shell">
 
-  <!-- ── Sidebar ── -->
+  <!-- ── Left Sidebar ── -->
   <nav class="plat-nav" id="platNav">
     <div class="nav-brand">
       <div class="nav-brand-icon">🚚</div>
@@ -45,87 +162,206 @@
       </div>
     </div>
 
-    <div class="nav-group-label">Viste</div>
-    <button class="nav-link active" data-v="plan" onclick="setView('plan')">
-      <span class="nl-icon">🗓</span>Pianificazione
+    <div class="nav-group-label">Piattaforma</div>
+    <button class="nav-link active" data-section="dashboard" onclick="navigate('dashboard')">
+      <span class="nl-icon">📊</span>Dashboard
     </button>
-    <button class="nav-link" data-v="cov" onclick="setView('cov')">
-      <span class="nl-icon">📊</span>Copertura &amp; Delta
+    <button class="nav-link" data-section="scheduler" onclick="navigate('scheduler')">
+      <span class="nl-icon">🗓</span>Scheduler turni
     </button>
-
-    <div class="nav-group-label">Gestione</div>
-    <button class="nav-link" data-v="das" onclick="setView('das')">
-      <span class="nl-icon">👤</span>Anagrafica DAS
+    <button class="nav-link" data-section="employees" onclick="navigate('employees')">
+      <span class="nl-icon">👥</span>Dipendenti
     </button>
-    <button class="nav-link" data-v="contr" onclick="setView('contr')">
-      <span class="nl-icon">📋</span>Contratti
-    </button>
-    <button class="nav-link" data-v="leg" onclick="setView('leg')">
-      <span class="nl-icon">📖</span>Legenda codici
+    <button class="nav-link" data-section="reports" onclick="navigate('reports')">
+      <span class="nl-icon">📈</span>Report &amp; Analytics
     </button>
 
     <div class="nav-group-label adminonly">Admin</div>
-    <button class="nav-link adminonly" data-v="appr" onclick="setView('appr')">
-      <span class="nl-icon">✅</span>Approvazioni
-      <span class="nl-badge" id="apprBadge" style="display:none">0</span>
-    </button>
-    <button class="nav-link adminonly" data-v="cfg" onclick="setView('cfg')">
-      <span class="nl-icon">⚙</span>Config
-    </button>
-    <button class="nav-link adminonly" data-v="an" onclick="setView('an')">
-      <span class="nl-icon">📈</span>Analisi
-    </button>
-    <button class="nav-link adminonly" data-v="log" onclick="setView('log')">
-      <span class="nl-icon">📝</span>Registro
-    </button>
-    <button class="nav-link adminonly" data-v="data" onclick="setView('data')">
-      <span class="nl-icon">🗄</span>Dati &amp; Sync
+    <button class="nav-link adminonly" data-section="settings" onclick="navigate('settings')">
+      <span class="nl-icon">⚙</span>Impostazioni
     </button>
 
+    <!-- Scheduler sub-nav (visible only in scheduler section) -->
+    <div id="sched-subnav" style="display:none;margin-top:6px">
+      <div class="nav-group-label">Viste scheduler</div>
+      <button class="nav-link" data-v="plan"  onclick="schedSetView('plan')" ><span class="nl-icon">📅</span>Pianificazione</button>
+      <button class="nav-link" data-v="cov"   onclick="schedSetView('cov')" ><span class="nl-icon">📊</span>Copertura</button>
+      <button class="nav-link" data-v="das"   onclick="schedSetView('das')" ><span class="nl-icon">👤</span>Anagrafica DAS</button>
+      <button class="nav-link" data-v="contr" onclick="schedSetView('contr')"><span class="nl-icon">📋</span>Contratti</button>
+      <button class="nav-link" data-v="leg"   onclick="schedSetView('leg')" ><span class="nl-icon">📖</span>Legenda</button>
+      <button class="nav-link adminonly" data-v="an"   onclick="schedSetView('an')"  ><span class="nl-icon">📉</span>Analisi</button>
+      <button class="nav-link adminonly" data-v="cfg"  onclick="schedSetView('cfg')" ><span class="nl-icon">🔧</span>Config</button>
+      <button class="nav-link adminonly" data-v="log"  onclick="schedSetView('log')" ><span class="nl-icon">📝</span>Registro</button>
+      <button class="nav-link adminonly" data-v="data" onclick="schedSetView('data')"><span class="nl-icon">🗄</span>Dati &amp; Sync</button>
+    </div>
+
     <div class="nav-bottom">
-      <div class="nav-sync-pill" id="navSync">🔵 Locale</div>
+      <div class="nav-sync-pill" id="navSync">🔵 Connesso</div>
       <div style="padding:4px 12px">
-        <span class="save-pill" id="saveState"></span>
+        <span class="save-pill" id="saveState" style="font-size:.7rem;color:var(--muted)"></span>
       </div>
-      <a class="nav-link" href="dashboard.html" style="margin-top:4px">
-        <span class="nl-icon">📊</span>Dashboard
-      </a>
       <button class="nav-logout" onclick="doLogout()">
         <span>↪</span>Esci
       </button>
     </div>
   </nav>
 
-  <!-- ── Content ── -->
-  <div class="plat-content" style="overflow:hidden">
+  <!-- ── Content area ── -->
+  <div class="plat-content" id="platContent">
 
-    <!-- Top header -->
+    <!-- ── Shared Top Header ── -->
     <header class="plat-header">
       <div>
-        <span class="ph-title" id="monthLabel">—</span>
-        <span class="ph-sub"  id="planScope"></span>
+        <span class="ph-title" id="pageTitle">Dashboard</span>
+        <span class="ph-sub"   id="pageSubtitle"></span>
       </div>
       <div class="ph-spacer"></div>
 
-      <!-- Role badge + branch chip -->
-      <span class="role-badge" id="roleBadge">
-        <span class="role-dot"></span><span id="roleTxt">Team</span>
-      </span>
-      <button class="branch-chip teamonly" id="filChip" onclick="openFilialePick()">
-        📍 <span id="filChipTxt">—</span> ▾
-      </button>
+      <!-- Global search -->
+      <div class="ph-search">
+        <input id="globalSearch" placeholder="Cerca dipendente, ID…" autocomplete="off"
+               oninput="debouncedGlobalSearch(this.value)"
+               onblur="setTimeout(()=>{document.getElementById('searchDropdown').style.display='none'},200)">
+        <div id="searchDropdown" class="ph-search-dd"></div>
+      </div>
 
-      <!-- Month navigation -->
-      <button class="nav-arrow" onclick="shiftMonth(-1)" title="Mese precedente">‹</button>
-      <button class="nav-arrow" onclick="shiftMonth(1)"  title="Mese successivo">›</button>
+      <!-- Notifications -->
+      <div class="ph-notif">
+        <button class="ph-notif-btn" onclick="toggleNotifPanel()" title="Notifiche">
+          🔔<span class="ph-notif-badge" id="notifBadge" style="display:none">0</span>
+        </button>
+        <div class="ph-notif-panel" id="notifPanel" style="display:none">
+          <div class="ph-notif-head">
+            <span>Notifiche</span>
+            <button class="btn-ghost btn-sm" style="padding:3px 8px;font-size:.7rem;background:var(--card);border:1px solid var(--line2);border-radius:6px;cursor:pointer" onclick="markAllRead()">Segna lette</button>
+          </div>
+          <div id="notifList"></div>
+        </div>
+      </div>
 
-      <button class="h-pill" id="loginBtn" onclick="toggleLogin()">Accedi</button>
+      <!-- Scheduler controls (shown only in scheduler section) -->
+      <div id="schedHeader" style="display:none;align-items:center;gap:8px">
+        <span class="role-badge" id="roleBadge"><span class="role-dot"></span><span id="roleTxt">Team</span></span>
+        <button class="branch-chip teamonly" id="filChip" onclick="openFilialePick()">
+          📍 <span id="filChipTxt">—</span> ▾
+        </button>
+        <button class="nav-arrow" onclick="shiftMonth(-1)">‹</button>
+        <span class="period-label" id="monthLabel">—</span>
+        <button class="nav-arrow" onclick="shiftMonth(1)">›</button>
+        <span class="save-pill" id="schedSaveState" style="font-size:.7rem;color:var(--muted)"></span>
+      </div>
+
+      <!-- Dashboard controls -->
+      <div id="dashHeader" style="display:flex;align-items:center;gap:8px">
+        <input type="date" id="kpiDate" class="inp" style="width:136px;font-size:.78rem;padding:6px 9px">
+        <select id="branchSel" class="sel" style="font-size:.78rem">
+          <option value="">Tutte le filiali</option>
+        </select>
+        <button class="h-pill primary" onclick="refreshAll()">↻ Aggiorna</button>
+      </div>
+
+      <button class="h-pill" id="headerLoginBtn" onclick="toggleLogin()" style="display:none">Accedi</button>
     </header>
 
-    <!-- ── Scheduler main area ── -->
-    <div style="display:flex;flex-direction:column;height:calc(100vh - var(--header-h));overflow:hidden">
+    <!-- ════════════════════════════════════
+         SECTIONS
+         ════════════════════════════════════ -->
 
-      <!-- Toolbar (planning only) -->
+    <!-- ── DASHBOARD ── -->
+    <div class="spa-section active" id="sec-dashboard">
+      <div class="dash-page">
+        <div class="page-head">
+          <div>
+            <div class="page-title" id="greetTitle">Dashboard</div>
+            <div class="page-sub"   id="greetSub"></div>
+          </div>
+          <span id="dspDateLabel" class="text-sm text-muted"></span>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi-card pri skel" style="height:120px"></div>
+          <div class="kpi-card ok  skel fade-in-1" style="height:120px"></div>
+          <div class="kpi-card bad skel fade-in-2" style="height:120px"></div>
+          <div class="kpi-card warn skel fade-in-3" style="height:120px"></div>
+        </div>
+
+        <!-- Row 2 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">🎯 Forecast vs Pianificato</span>
+              <span class="badge b-muted" id="fcBadge">—</span>
+            </div>
+            <div id="fcContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">📋 Contratti in scadenza</span>
+            </div>
+            <div id="expiryContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">👁 Presenza oggi</span>
+            </div>
+            <div id="attContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
+        </div>
+
+        <!-- DSP table  -->
+        <div class="card cp mb-4">
+          <div class="section-head">
+            <span class="section-title">🚚 Operatività per filiale</span>
+            <button class="h-pill btn-sm" style="font-size:.72rem" onclick="navigate('scheduler')">→ Apri Scheduler</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="tbl" id="dspTbl">
+              <thead><tr><th>Filiale</th><th>Driver totali</th><th>In turno</th><th>Copertura</th></tr></thead>
+              <tbody><tr><td colspan="4"><div class="skel" style="height:22px;border-radius:6px"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Expiry alerts -->
+        <div class="card cp mb-4">
+          <div class="section-head">
+            <span class="section-title">⏰ Scadenze prossime (60 gg)</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="tbl" id="alertsTbl">
+              <thead><tr><th>Dipendente</th><th>Tipo</th><th>Scadenza</th><th>Giorni</th><th>Stato</th></tr></thead>
+              <tbody><tr><td colspan="5"><div class="skel" style="height:22px;border-radius:6px"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <div class="chart-card" style="grid-column:span 2">
+            <div class="chart-title">Presenze ultimi 30 giorni</div>
+            <div style="height:200px"><canvas id="chartAtt"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Forecast vs Pianificato (30 gg)</div>
+            <div style="height:200px"><canvas id="chartFc"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Tipi di assenza (90 gg)</div>
+            <div style="height:200px"><canvas id="chartAbs"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Crescita dipendenti (12 mesi)</div>
+            <div style="height:200px"><canvas id="chartGrow"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /sec-dashboard -->
+
+    <!-- ── SCHEDULER ── -->
+    <div class="spa-section" id="sec-scheduler">
+
+      <!-- Scheduler toolbar -->
       <div class="sch-toolbar" id="planToolbar">
         <button class="today-btn" onclick="goToToday()">Oggi</button>
         <button class="nav-arrow" onclick="shiftWeek(-1)">‹</button>
@@ -153,145 +389,210 @@
         <button class="h-pill primary adminonly" onclick="openAddDriver()">+ DAS</button>
       </div>
 
-      <!-- Views -->
-
-      <!-- PLANNING -->
-      <div class="sch-view on" id="v-plan">
-        <div class="adminonly" id="autoBanner" style="display:none;background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px 16px;font-size:.8rem"></div>
-        <div id="violBanner" style="display:none;background:var(--bad-bg);border-bottom:1px solid var(--bad);padding:8px 16px;font-size:.8rem"></div>
-        <div class="board-outer" id="boardOuter">
-          <div id="boardInner">
-            <div class="board-empty"><div class="ei">🗓️</div><p>Caricamento turni…</p></div>
+      <!-- Scheduler views -->
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column" id="schedViewport">
+        <!-- PLANNING (board) -->
+        <div class="sch-view on" id="v-plan" style="flex:1;overflow:hidden;flex-direction:column">
+          <div class="adminonly" id="autoBanner" style="display:none;background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px 16px;font-size:.8rem"></div>
+          <div id="violBanner" style="display:none;background:var(--bad-bg);border-bottom:1px solid var(--bad);padding:8px 16px;font-size:.8rem"></div>
+          <div class="board-outer" id="boardOuter">
+            <div id="boardInner">
+              <div class="board-empty"><div class="ei">🗓️</div><p>Caricamento turni…</p></div>
+            </div>
+          </div>
+          <!-- Bottom KPI bar -->
+          <div class="sch-bottom-bar">
+            <div class="bkpi pri"><div class="bkpi-val" id="kpiDrivers">—</div><div class="bkpi-lbl">Driver</div></div>
+            <div class="bkpi ok"> <div class="bkpi-val" id="kpiPresent">—</div><div class="bkpi-lbl">In turno</div></div>
+            <div class="bkpi bad"><div class="bkpi-val" id="kpiAbsent">—</div><div class="bkpi-lbl">Assenti</div></div>
+            <div class="bkpi warn"><div class="bkpi-val" id="kpiOff">—</div><div class="bkpi-lbl">OFF</div></div>
+            <div class="bkpi"><div class="bkpi-val" id="kpiFc">—</div><div class="bkpi-lbl">Forecast</div></div>
+            <div class="bkpi"><div class="bkpi-val" id="kpiCov">—</div><div class="bkpi-lbl">Copertura</div></div>
+            <div class="bkpi bad"><div class="bkpi-val" id="kpiViol">0</div><div class="bkpi-lbl">Conflitti</div></div>
+            <div class="bkpi" style="margin-left:auto">
+              <div class="bkpi-val" style="font-size:.72rem;font-weight:600;color:var(--muted)" id="kpiSyncBar">—</div>
+              <div class="bkpi-lbl">Sync</div>
+            </div>
           </div>
         </div>
-        <!-- Bottom KPI bar -->
-        <div class="sch-bottom-bar">
-          <div class="bkpi pri"><div class="bkpi-val" id="kpiDrivers">—</div><div class="bkpi-lbl">Driver</div></div>
-          <div class="bkpi ok"> <div class="bkpi-val" id="kpiPresent">—</div><div class="bkpi-lbl">In turno</div></div>
-          <div class="bkpi bad"><div class="bkpi-val" id="kpiAbsent">—</div><div class="bkpi-lbl">Assenti</div></div>
-          <div class="bkpi warn"><div class="bkpi-val" id="kpiOff">—</div><div class="bkpi-lbl">OFF</div></div>
-          <div class="bkpi">   <div class="bkpi-val" id="kpiFc">—</div><div class="bkpi-lbl">Forecast</div></div>
-          <div class="bkpi">   <div class="bkpi-val" id="kpiCov">—</div><div class="bkpi-lbl">Copertura</div></div>
-          <div class="bkpi bad"><div class="bkpi-val" id="kpiViol">0</div><div class="bkpi-lbl">Conflitti</div></div>
-          <div class="bkpi" style="margin-left:auto">
-            <div class="bkpi-val" style="font-size:.72rem;font-weight:600;color:var(--muted)" id="kpiSyncBar">—</div>
-            <div class="bkpi-lbl">Sync</div>
+
+        <!-- Other scheduler views -->
+        <div class="sch-view" id="v-cov" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Copertura &amp; Delta <small id="covScope"></small></h1>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+            <div class="seg" id="covRangeSeg">
+              <button class="on" data-cr="week" onclick="setCovRange('week')">Settimana</button>
+              <button data-cr="month" onclick="setCovRange('month')">Mese</button>
+            </div>
+            <div class="weeknav" id="covWeekNav"></div>
+            <button class="btn ghost sm" onclick="toggleFcDelta()">Mostra forecast</button>
           </div>
+          <div style="overflow:auto"><table class="grid" id="covGrid"></table></div>
         </div>
-      </div>
-
-      <!-- COPERTURA -->
-      <div class="sch-view" id="v-cov" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Copertura &amp; Delta <small id="covScope" style="font-size:.72rem;color:var(--muted)"></small></h1>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-          <div class="view-seg" id="covRangeSeg">
-            <button class="on" data-cr="week" onclick="setCovRange('week')">Settimana</button>
-            <button data-cr="month" onclick="setCovRange('month')">Mese</button>
+        <div class="sch-view" id="v-das" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Anagrafica DAS <small id="dasScope"></small></h1>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+            <input type="search" id="qDas" placeholder="Cerca…" oninput="renderDas()" style="padding:7px 10px;border:1px solid var(--line2);border-radius:8px;flex:1;max-width:220px">
+            <select id="aFiliale" onchange="renderDas()" class="t-sel"></select>
+            <select id="aStato"   onchange="renderDas()" class="t-sel">
+              <option value="">Tutti</option><option value="active">Attivi</option>
+              <option value="inactive">Inattivi</option><option value="pending">In attesa</option>
+            </select>
+            <button class="btn ghost sm" onclick="exportDas()">⬇ CSV</button>
           </div>
-          <span id="covWeekNav"></span>
-          <button class="h-pill btn-sm" onclick="toggleFcDelta()">Mostra forecast</button>
+          <div style="overflow:auto"><table id="dasTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"><thead></thead><tbody></tbody></table></div>
         </div>
-        <div style="overflow:auto"><table class="grid" id="covGrid" style="border-collapse:separate;border-spacing:0;font-size:.78rem;white-space:nowrap"></table></div>
-      </div>
-
-      <!-- ANAGRAFICA DAS -->
-      <div class="sch-view" id="v-das" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Anagrafica DAS <small id="dasScope" style="font-size:.72rem;color:var(--muted)"></small></h1>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-          <div class="t-search" style="max-width:220px"><input type="search" id="qDas" placeholder="Cerca…" oninput="renderDas()" autocomplete="off"></div>
-          <select id="aFiliale" onchange="renderDas()" class="t-sel"></select>
-          <select id="aStato"   onchange="renderDas()" class="t-sel">
-            <option value="">Tutti</option><option value="active">Attivi</option>
-            <option value="inactive">Inattivi</option><option value="pending">In attesa</option>
-          </select>
-          <button class="h-pill btn-sm" onclick="exportDas()">⬇ CSV</button>
+        <div class="sch-view" id="v-contr" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Contratti &amp; Scadenze</h1>
+          <div style="overflow:auto"><table id="contrTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"><thead></thead><tbody></tbody></table></div>
         </div>
-        <div style="overflow:auto"><table id="dasTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"><thead></thead><tbody></tbody></table></div>
-      </div>
-
-      <!-- CONTRATTI -->
-      <div class="sch-view" id="v-contr" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Contratti &amp; Scadenze</h1>
-        <div style="overflow:auto"><table id="contrTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"><thead></thead><tbody></tbody></table></div>
-      </div>
-
-      <!-- APPROVAZIONI -->
-      <div class="sch-view adminonly" id="v-appr" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Approvazioni DAS</h1>
-        <div id="apprList"></div>
-      </div>
-
-      <!-- CONFIG -->
-      <div class="sch-view adminonly" id="v-cfg" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Configurazione</h1>
-        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:14px" class="view-seg">
-          <button class="on" data-ct="filiali"   onclick="setCfgTab('filiali')">Filiali</button>
-          <button data-ct="codes"     onclick="setCfgTab('codes')">Codici</button>
-          <button data-ct="services"  onclick="setCfgTab('services')">Servizi</button>
-          <button data-ct="contracts" onclick="setCfgTab('contracts')">Contratti</button>
-          <button data-ct="users"     onclick="setCfgTab('users')">Account</button>
-          <button data-ct="counters"  onclick="setCfgTab('counters')">Contatori</button>
+        <div class="sch-view adminonly" id="v-appr" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Approvazioni DAS</h1>
+          <div id="apprList"></div>
         </div>
-        <div id="cfgBody"></div>
-      </div>
-
-      <!-- ANALISI -->
-      <div class="sch-view adminonly" id="v-an" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Analisi</h1>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-          <select id="anFiliale" onchange="renderAnalysis()" class="t-sel"></select>
-          <button class="h-pill btn-sm" onclick="exportAnalysis()">⬇ CSV</button>
-          <button class="h-pill btn-sm" onclick="exportOvertime()">⬇ Straordinari</button>
+        <div class="sch-view adminonly" id="v-cfg" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Configurazione</h1>
+          <div class="seg" style="margin-bottom:14px">
+            <button class="on" data-ct="filiali"   onclick="setCfgTab('filiali')">Filiali</button>
+            <button data-ct="codes"     onclick="setCfgTab('codes')">Codici</button>
+            <button data-ct="services"  onclick="setCfgTab('services')">Servizi</button>
+            <button data-ct="contracts" onclick="setCfgTab('contracts')">Contratti</button>
+            <button data-ct="users"     onclick="setCfgTab('users')">Account</button>
+            <button data-ct="counters"  onclick="setCfgTab('counters')">Contatori</button>
+          </div>
+          <div id="cfgBody"></div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="anKpis"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="anCharts"></div>
-      </div>
-
-      <!-- REGISTRO -->
-      <div class="sch-view adminonly" id="v-log" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Registro modifiche</h1>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-          <div class="t-search" style="max-width:220px"><input type="search" id="qLog" placeholder="Cerca…" oninput="renderLog()" autocomplete="off"></div>
-          <button class="h-pill btn-sm" onclick="exportLog()">⬇ CSV</button>
-          <button class="h-pill btn-sm adminonly" onclick="clearLog()" style="color:var(--bad)">🗑 Svuota</button>
+        <div class="sch-view adminonly" id="v-an" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Analisi</h1>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <select id="anFiliale" onchange="renderAnalysis()" class="t-sel"></select>
+            <button class="btn ghost sm" onclick="exportAnalysis()">⬇ CSV</button>
+            <button class="btn ghost sm" onclick="exportOvertime()">⬇ Straordinari</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="anKpis"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="anCharts"></div>
         </div>
-        <div style="overflow:auto"><table id="logTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"></table></div>
-      </div>
-
-      <!-- LEGENDA -->
-      <div class="sch-view" id="v-leg" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Legenda codici turno</h1>
-        <div style="overflow:auto"><table id="legTbl" style="width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:14px"></table></div>
-        <h2 style="font-size:.85rem;font-weight:700;margin-bottom:8px">Inquadramenti contrattuali</h2>
-        <div style="overflow:auto"><table id="ctrTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"></table></div>
-      </div>
-
-      <!-- DATI -->
-      <div class="sch-view adminonly" id="v-data" style="overflow:auto;padding:16px">
-        <h1 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Dati &amp; Sincronizzazione</h1>
-        <p class="text-sm text-muted" style="margin-bottom:14px">Fonte di verità: PostgreSQL. localStorage è solo cache locale.</p>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-          <button class="h-pill btn-sm" onclick="exportJson()">⬇ Esporta JSON</button>
-          <label class="h-pill btn-sm">⬆ Importa JSON<input type="file" accept=".json" onchange="importJson(event)" style="display:none"></label>
-          <button class="h-pill btn-sm adminonly" onclick="resetMonth()" style="color:var(--bad)">🗑 Azzera mese</button>
+        <div class="sch-view adminonly" id="v-log" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Registro modifiche</h1>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input type="search" id="qLog" placeholder="Cerca…" oninput="renderLog()" style="padding:7px 10px;border:1px solid var(--line2);border-radius:8px;max-width:220px">
+            <button class="btn ghost sm" onclick="exportLog()">⬇ CSV</button>
+            <button class="btn warn sm adminonly" onclick="clearLog()">🗑 Svuota</button>
+          </div>
+          <div style="overflow:auto"><table id="logTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"></table></div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-          <input id="apiUrl" class="inp" placeholder="URL endpoint legacy (opzionale)" style="flex:1;max-width:340px;font-size:.8rem">
-          <button class="h-pill btn-sm" onclick="syncPull()">⬇ Pull</button>
-          <button class="h-pill btn-sm" onclick="syncPush()">⬆ Push</button>
+        <div class="sch-view" id="v-leg" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Legenda codici turno</h1>
+          <div style="overflow:auto"><table id="legTbl" style="width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:14px"></table></div>
+          <h2 style="font-size:.85rem;font-weight:700;margin-bottom:8px">Inquadramenti contrattuali</h2>
+          <div style="overflow:auto"><table id="ctrTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"></table></div>
         </div>
-        <label style="display:flex;align-items:center;gap:7px;font-size:.8rem;cursor:pointer">
-          <input type="checkbox" id="autoGenChk" onchange="toggleAutoGen()">
-          Genera turni automaticamente all'inizio del mese
-        </label>
-        <div id="syncMsg" class="text-sm text-muted mt-2"></div>
-      </div>
+        <div class="sch-view adminonly" id="v-data" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Dati &amp; Sincronizzazione</h1>
+          <p class="text-sm text-muted" style="margin-bottom:14px">Fonte di verità: PostgreSQL. localStorage è solo cache locale.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+            <button class="btn ghost sm" onclick="exportJson()">⬇ Esporta JSON</button>
+            <label class="btn ghost sm">⬆ Importa JSON<input type="file" accept=".json" onchange="importJson(event)" style="display:none"></label>
+            <button class="btn warn sm adminonly" onclick="resetMonth()" style="font-size:.76rem">🗑 Azzera mese</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="apiUrl" class="inp" placeholder="URL endpoint legacy (opzionale)" style="max-width:340px;font-size:.8rem">
+            <button class="btn ghost sm" onclick="syncPull()">⬇ Pull</button>
+            <button class="btn ghost sm" onclick="syncPush()">⬆ Push</button>
+          </div>
+          <label style="display:flex;align-items:center;gap:7px;font-size:.8rem;cursor:pointer">
+            <input type="checkbox" id="autoGenChk" onchange="toggleAutoGen()">
+            Genera turni automaticamente all'inizio del mese
+          </label>
+          <div id="syncMsg" class="text-sm text-muted mt-2"></div>
+        </div>
+      </div><!-- /schedViewport -->
 
-    </div><!-- /flex-col -->
+    </div><!-- /sec-scheduler -->
+
+    <!-- ── EMPLOYEES ── -->
+    <div class="spa-section" id="sec-employees">
+      <div class="page-head">
+        <div>
+          <div class="page-title">👥 Dipendenti</div>
+          <div class="page-sub">Anagrafica, contratti, documenti</div>
+        </div>
+      </div>
+      <div class="card cp" style="max-width:900px">
+        <p class="text-muted text-sm" style="margin-bottom:12px">Il modulo dipendenti completo è disponibile nella pagina dedicata.</p>
+        <a class="btn btn-pri" href="employees.html" target="_blank">Apri modulo dipendenti ↗</a>
+      </div>
+    </div>
+
+    <!-- ── REPORTS ── -->
+    <div class="spa-section" id="sec-reports">
+      <div class="page-head">
+        <div class="page-title">📈 Report &amp; Analytics</div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card" style="grid-column:span 2">
+          <div class="chart-title">Presenze ultimi 30 giorni</div>
+          <div style="height:220px"><canvas id="rptChartAtt"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Forecast vs Pianificato</div>
+          <div style="height:220px"><canvas id="rptChartFc"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Tipi assenza (90 gg)</div>
+          <div style="height:220px"><canvas id="rptChartAbs"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Crescita dipendenti</div>
+          <div style="height:220px"><canvas id="rptChartGrow"></canvas></div>
+        </div>
+      </div>
+      <div class="card cp mt-4">
+        <div class="section-title mb-2">📁 Export</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <a class="btn btn-ghost btn-sm" id="rptExpEmp">⬇ Dipendenti Excel</a>
+          <a class="btn btn-ghost btn-sm" id="rptExpFc">⬇ Forecast Excel</a>
+          <a class="btn btn-ghost btn-sm" id="rptExpSch">⬇ Turni Excel</a>
+          <a class="btn btn-ghost btn-sm" id="rptPdfMonth">🖨 Turni mese PDF</a>
+          <a class="btn btn-ghost btn-sm" id="rptPdfAbs">🖨 Assenze PDF</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS (admin) ── -->
+    <div class="spa-section adminonly" id="sec-settings">
+      <div class="page-head">
+        <div class="page-title">⚙ Impostazioni</div>
+      </div>
+      <div class="card cp mb-4" style="max-width:700px">
+        <div class="section-title mb-2">👤 Crea account utente</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end">
+          <div><label class="lbl">Username</label><input id="nuUser" class="inp" autocapitalize="off"></div>
+          <div><label class="lbl">Password</label><input id="nuPass" class="inp" type="text"></div>
+          <div><label class="lbl">Nome</label><input id="nuName" class="inp"></div>
+          <div><label class="lbl">Ruolo</label>
+            <select id="nuRole" class="sel" style="width:100%">
+              <option value="team_leader">Team Leader</option>
+              <option value="osm">OSM</option>
+              <option value="hr_manager">HR Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div><label class="lbl">Filiali</label><select id="nuBranches" class="sel" style="width:100%" multiple size="3"></select></div>
+          <div><button class="btn btn-pri w-full" onclick="createUser()">+ Crea account</button></div>
+        </div>
+        <div id="nuMsg" class="text-sm mt-2"></div>
+      </div>
+      <div class="card cp" style="max-width:700px">
+        <div class="section-title mb-2">Lista utenti</div>
+        <div style="overflow-x:auto"><table class="tbl" id="usersTbl"></table></div>
+      </div>
+    </div>
+
   </div><!-- /plat-content -->
 </div><!-- /plat-shell -->
 
-<!-- Right slide panel -->
+<!-- ── Slide panel (shift editor) ── -->
 <div id="slidePanel">
   <div class="sp-head">
     <div><h3 id="spTitle">Turno</h3><p id="spSub">—</p></div>
@@ -322,19 +623,19 @@
     </div>
   </div>
   <div class="sp-footer">
-    <button class="sp-btn ok"    onclick="spSave()">✓ Salva</button>
-    <button class="sp-btn ghost" onclick="spDuplicate()" title="Duplica stessa settimana">⊕ Duplica</button>
-    <button class="sp-btn del"   onclick="spDelete()">🗑 Svuota</button>
+    <button class="sp-btn ok"    onclick="boardSpSave()">✓ Salva</button>
+    <button class="sp-btn ghost" onclick="boardSpDuplicate()">⊕ Duplica</button>
+    <button class="sp-btn del"   onclick="boardSpDelete()">🗑 Svuota</button>
   </div>
 </div>
 <div id="spBackdrop" onclick="closePanel()" style="position:fixed;inset:0;z-index:299;display:none"></div>
 
-<!-- Legacy overlays -->
+<!-- ── Scheduler overlays ── -->
 <div class="overlay" id="picker">
-  <div class="obox" style="max-width:500px">
+  <div class="obox" style="max-width:520px">
     <button class="obox-close" onclick="closeAll()">✕</button>
     <h2 id="pkTitle">Seleziona turno</h2>
-    <p class="text-sm text-muted" id="pkSub" style="margin:-6px 0 12px"></p>
+    <p style="font-size:.78rem;color:var(--muted);margin:-6px 0 12px" id="pkSub"></p>
     <div id="pkBody"></div>
   </div>
 </div>
@@ -345,14 +646,14 @@
     <div style="display:grid;gap:10px;margin-top:12px">
       <div><label class="lbl">Username (opzionale)</label><input id="luUser" class="inp" placeholder="Lascia vuoto per Admin"></div>
       <div><label class="lbl">PIN</label><input id="luPin" class="inp" type="password" maxlength="12" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="btn btn-pri" onclick="doLogin()">Accedi</button>
-      <div id="luMsg" class="text-sm" style="color:var(--bad)"></div>
+      <button class="btn" onclick="doLogin()">Accedi</button>
+      <div id="luMsg" style="font-size:.8rem;color:var(--bad)"></div>
       <hr style="border:0;border-top:1px solid var(--line)">
       <div class="adminonly">
         <label class="lbl">Nuovo PIN admin</label>
         <div style="display:flex;gap:7px">
-          <input id="pinNew" class="inp flex-1" type="text" placeholder="Nuovo PIN">
-          <button class="btn btn-ghost btn-sm" onclick="changePin()">Salva</button>
+          <input id="pinNew" class="inp" type="text" placeholder="Nuovo PIN" style="flex:1">
+          <button class="btn ghost sm" onclick="changePin()">Salva</button>
         </div>
       </div>
     </div>
@@ -365,8 +666,8 @@
     <div style="display:grid;gap:10px;margin-top:12px">
       <div><label class="lbl">Filiale</label><select id="autoFil" class="sel w-full"></select></div>
       <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="autoOverwrite"> Sovrascrivi celle già compilate</label>
-      <button class="btn btn-pri" onclick="runAutoGen()">▶ Genera</button>
-      <div id="autoMsg" class="text-sm text-muted"></div>
+      <button class="btn" onclick="runAutoGen()">▶ Genera</button>
+      <div id="autoMsg" style="font-size:.8rem;color:var(--muted)"></div>
     </div>
   </div>
 </div>
@@ -379,8 +680,8 @@
         <label class="lbl">Incolla lista (uno per riga: Cognome Nome Filiale Contratto Servizio)</label>
         <textarea id="ewArea" class="inp" rows="8" placeholder="Rossi Mario DLO1 21 NEXT&#10;Bianchi Laura DLO7 PTV 18h SAME A"></textarea>
       </div>
-      <button class="btn btn-pri" onclick="importEw()">Importa</button>
-      <div id="ewMsg" class="text-sm text-muted"></div>
+      <button class="btn" onclick="importEw()">Importa</button>
+      <div id="ewMsg" style="font-size:.8rem;color:var(--muted)"></div>
     </div>
   </div>
 </div>
@@ -399,7 +700,10 @@
   </div>
 </div>
 
+<script src="api.js"></script>
+
 <script>
+
 /* ============================================================
    TurniDSP v4 — vista settimanale, filiali configurabili,
    scoping per filiale (team), import/export DAS, export
@@ -920,824 +1224,464 @@ let toastT=null;function toast(m){const t=document.getElementById("toast");t.tex
 document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)closeAll();}));
 
 /* ---------- init ---------- */
-(function(){
-  /* Bridge to the platform login (set by the main app in localStorage).
-     - If not logged into the platform, send the user to the login page.
-     - If the platform user is an admin, open the scheduler in admin (editable)
-       mode automatically, ignoring any stale local "team" lock and the legacy PIN. */
-  var pUser=null, pTok=localStorage.getItem("turnidsp_token");
-  try{ pUser=JSON.parse(localStorage.getItem("turnidsp_user")); }catch(e){}
-  if(!pTok || !pUser){ (window.top||window).location.replace("login.html"); return; }
-  var platformAdmin = pUser.role==="admin";
 
-  loadMonth();
-  if(platformAdmin){
-    ROLE="admin"; teamLocked=false; currentUser=pUser.full_name||pUser.username||"admin";
-    localStorage.setItem("turniDSP_role","admin"); saveSession();
-  } else {
-    let sess=null;try{sess=JSON.parse(localStorage.getItem("turniDSP_session"));}catch(e){}
-    if(sess&&sess.role==="team"&&sess.locked&&users().some(u=>u.username===sess.user)){ROLE="team";teamLocked=true;currentUser=sess.user;teamFiliale=sess.filiale;}
-    else{ROLE="team";teamLocked=false;currentUser=pUser.full_name||pUser.username||"team";}
-  }
-  ensureTeamFiliale();applyRole();refreshFilSelects();refreshAll();})();
+/* ════════════════════════════════════════════════════════════════
+   TurniDSP SPA — Unified Single-Page Application
+   Scheduler core + Dashboard + Router + Shared state
+   ════════════════════════════════════════════════════════════════ */
 
-/* ══════════════════════════════════════════════════════════════
-   MONDAY.COM STYLE RENDERER — overrides the original renderGrid
-   Uses the same state/data model, produces a grouped board UI.
-   ══════════════════════════════════════════════════════════════ */
-
-// ── Color palette for each service group cls ──────────────────
-const CLS_STYLE = {
-  next:  { bg:'var(--next-bg)',  fg:'var(--next)',  br:'var(--next-br)',  avatarBg:'#B45309' },
-  samea: { bg:'var(--samea-bg)', fg:'var(--samea)', br:'var(--samea-br)', avatarBg:'#1D4ED8' },
-  sameb: { bg:'var(--sameb-bg)', fg:'var(--sameb)', br:'var(--sameb-br)', avatarBg:'#6D28D9' },
-  mm:    { bg:'var(--mm-bg)',    fg:'var(--mm)',    br:'var(--mm-br)',    avatarBg:'#0F766E' },
-  abs:   { bg:'var(--abs-bg)',   fg:'var(--abs)',   br:'var(--abs-br)',   avatarBg:'#475569' },
-  mal:   { bg:'var(--mal-bg)',   fg:'var(--mal)',   br:'var(--mal-br)',   avatarBg:'#BE123C' },
-  off:   { bg:'var(--off-bg)',   fg:'var(--off)',   br:'var(--off-br)',   avatarBg:'#374151' },
-};
-
-function getClsStyle(cls) {
-  return CLS_STYLE[cls] || CLS_STYLE.abs;
-}
-
-// ── Service group → driver list (for board rows) ──────────────
-function buildServiceGroups(drivers) {
-  const groups = CFG().groups; // [{cls, name}]
-  const result = [];
-  const used = new Set();
-  for (const g of groups) {
-    const drv = drivers.filter(d => {
-      const dc = codeMeta(d.defaultCode || defCode(d.service)).cls || 'abs';
-      return dc === g.cls && !used.has(d.id);
-    });
-    if (drv.length > 0) {
-      drv.forEach(d => used.add(d.id));
-      result.push({ cls: g.cls, name: g.name, drivers: drv });
-    }
-  }
-  // Catch any uncategorised drivers
-  const leftover = drivers.filter(d => !used.has(d.id));
-  if (leftover.length) result.push({ cls: 'abs', name: 'Altri', drivers: leftover });
-  return result;
-}
-
-// Collapsed state persisted in memory
-const _collapsedGroups = new Set();
-
-// ── Override renderGrid ───────────────────────────────────────
-renderGrid = function() {
-  // Compute visDays
-  const allDays = [];
-  for (let d = 1; d <= daysInMonth(YM); d++) allDays.push(d);
-  const weeks = monthWeeks();
-  if (weekIdx >= weeks.length) weekIdx = weeks.length - 1;
-  if (weekIdx < 0) weekIdx = 0;
-  const visDays = planMode === 'week'
-    ? (weeks[weekIdx] ? weeks[weekIdx].days : allDays)
-    : allDays;
-
-  // Update period label
-  const [y, m] = YM.split('-').map(Number);
-  const mNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-  let label = mNames[m - 1] + ' ' + y;
-  if (planMode === 'week' && weeks.length) {
-    const w = weeks[weekIdx];
-    label += '  ·  Week ' + w.week + ' · ' + fmtDM(YM, w.days[0]) + '–' + fmtDM(YM, w.days[w.days.length - 1]);
-  }
-  const ml = document.getElementById('monthLabel');
-  if (ml) ml.textContent = label;
-
-  // Week nav in toolbar
-  const wn = document.getElementById('weekNav');
-  if (wn) wn.style.display = 'none'; // handled by toolbar buttons
-
-  // Scope label not needed in new UI
-  const ps = document.getElementById('planScope');
-  if (ps) ps.textContent = '';
-
-  const today = new Date();
-  const todayISO = today.toISOString().slice(0, 7);
-  const todayDay = today.getDate();
-
-  const all = scopedActive();
-  const drivers = filteredDrivers();
-
-  // Ref day for status filter
-  gridRefDay = (todayISO === YM && visDays.includes(todayDay)) ? todayDay : visDays[0];
-  gridDrivers = drivers;
-  gridDays = visDays;
-  refreshCodeList();
-
-  // ── Update bottom KPI bar ─────────────────────────────────
-  let kPres = 0, kAbs = 0, kOff = 0, kViols = 0;
-  all.forEach(dr => {
-    const c = getCode(dr.id, gridRefDay);
-    if (!c) return;
-    const cls = codeCls(c);
-    if (c.toUpperCase() === 'OFF') kOff++;
-    else if (cls === 'mal' || cls === 'abs' && codeMeta(c).is_absence) kAbs++;
-    else kPres++;
-    if (driverHasViolation(dr)) kViols++;
-  });
-  const svs = scopeServices();
-  let fcTotal = 0, plannedTotal = 0;
-  for (const s of svs) {
-    for (const d of visDays) {
-      fcTotal += forecastOf(s, d);
-      plannedTotal += cnt(dayCodes(d, all), s.count);
-    }
-  }
-  const covPct = fcTotal > 0 ? Math.round(plannedTotal / fcTotal * 100) : '—';
-
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('kpiDrivers', all.length);
-  set('kpiPresent', kPres);
-  set('kpiAbsent', kAbs);
-  set('kpiOff', kOff);
-  set('kpiFc', fcTotal || '—');
-  set('kpiCov', fcTotal > 0 ? covPct + '%' : '—');
-  set('kpiViol', kViols);
-  set('kpiSync', DB_SYNC ? '🟢 DB' : '🟡 locale');
-
-  // Also update header stat elements if they exist (legacy compat)
-  const _sd=document.getElementById('statDrivers'),_sp=document.getElementById('statPresent'),_sa=document.getElementById('statAbsent'),_so=document.getElementById('statOff'),_ss=document.getElementById('statSync');
-  if(_sd)_sd.textContent=all.length;if(_sp)_sp.textContent=kPres;if(_sa)_sa.textContent=kAbs;if(_so)_so.textContent=kOff;if(_ss)_ss.textContent=DB_SYNC?'🟢 DB sync':'🔴 locale';
-
-  // ── Violation banner ──────────────────────────────────────
-  const viols = all.filter(driverHasViolation);
-  const vb = document.getElementById('violBanner');
-  if (vb) {
-    if (viols.length) {
-      vb.style.display = 'flex';
-      vb.innerHTML = '<b>⚠️ Attenzione riposi:</b><span style="flex:1;margin-left:6px">' +
-        viols.length + ' DAS con 7+ giorni consecutivi: ' +
-        viols.slice(0, 5).map(d => esc(d.cognome)).join(', ') +
-        (viols.length > 5 ? '…' : '') + '</span>';
-    } else vb.style.display = 'none';
-  }
-
-  // ── Build column grid CSS ─────────────────────────────────
-  const colW = 52;
-  const colsTemplate = `220px repeat(${visDays.length}, ${colW}px) 42px`;
-  document.documentElement.style.setProperty('--grid-cols', colsTemplate);
-
-  // ── Build board HTML ──────────────────────────────────────
-  let html = '';
-
-  // Column headers
-  html += `<div class="board-cols" style="grid-template-columns:${colsTemplate}">`;
-  html += `<div class="col-emp">DAS / Servizio</div>`;
-  for (const d of visDays) {
-    const isToday = todayISO === YM && d === todayDay;
-    const isWend = [0, 6].includes(new Date(YM + '-' + String(d).padStart(2,'0')).getDay());
-    html += `<div class="col-day${isToday ? ' today-col' : ''}${isWend ? ' wend-col' : ''}">
-      <span class="dow">${dowName(YM, d).toUpperCase()}</span>
-      <span class="dnum">${d}</span>
-    </div>`;
-  }
-  html += `<div class="col-tot">SETT.</div>`;
-  html += `</div>`; // board-cols
-
-  if (!drivers.length) {
-    html += `<div class="board-empty"><div class="icon">👥</div><p>Nessun DAS${scopeFil() ? ' per ' + esc(scopeFil()) : ''}.<br>Aggiungilo da "Anagrafica DAS" o usa "Importa DAS".</p></div>`;
-    document.getElementById('boardInner').innerHTML = html;
-    return;
-  }
-
-  // Group drivers by service
-  const groups = buildServiceGroups(drivers);
-
-  for (const grp of groups) {
-    const st = getClsStyle(grp.cls);
-    const collapsed = _collapsedGroups.has(grp.cls);
-
-    html += `<div class="group-block${collapsed ? ' collapsed' : ''}" data-grp="${esc(grp.cls)}">`;
-
-    // Group header
-    html += `<div class="group-header" style="grid-template-columns:${colsTemplate}">`;
-    html += `<div class="gh-label" onclick="toggleGroup('${grp.cls}')">
-      <span class="gh-arrow">▼</span>
-      <span class="gh-service-dot" style="background:${st.fg}"></span>
-      ${esc(grp.name)}
-      <span class="gh-count">${grp.drivers.length}</span>
-    </div>`;
-    // Fill day columns with group-color bar
-    for (let i = 0; i < visDays.length; i++) {
-      html += `<div style="background:${st.bg};opacity:.35;border-right:1px solid var(--line)"></div>`;
-    }
-    html += `<div style="background:${st.bg};opacity:.35"></div>`;
-    html += `</div>`; // group-header
-
-    if (!collapsed) {
-      for (const dr of grp.drivers) {
-        const vflag = consecutiveFlag(dr);
-        const viol = Object.keys(vflag).length > 0;
-        const initials = ((dr.cognome || '')[0] || '') + ((dr.nome || '')[0] || '');
-        const weekTotal = workedDays(dr, visDays);
-
-        html += `<div class="emp-row" style="grid-template-columns:${colsTemplate}">`;
-
-        // Employee cell
-        html += `<div class="emp-cell">
-          ${viol ? `<span class="viol-dot" title="7+ giorni consecutivi senza riposo">⚠️</span>` : ''}
-          <div class="emp-avatar" style="background:${st.avatarBg}">${esc(initials.toUpperCase())}</div>
-          <div style="min-width:0">
-            <div class="emp-name">${esc(dr.cognome)} ${esc(dr.nome)}</div>
-            <div class="emp-sub">${esc(dr.filiale)} · ${esc(dr.contratto || '—')}</div>
-          </div>
-        </div>`;
-
-        // Shift cells
-        for (const d of visDays) {
-          const code = getCode(dr.id, d);
-          const cls = codeCls(code);
-          const cst = getClsStyle(cls);
-          const isToday = todayISO === YM && d === todayDay;
-          const isWend = [0, 6].includes(new Date(YM + '-' + String(d).padStart(2,'0')).getDay());
-          const isViol = !!vflag[d];
-          const cellClasses = [
-            'shift-cell',
-            isToday ? 'today-cell' : '',
-            isWend ? 'wend-cell' : '',
-            isViol ? 'viol-cell' : '',
-          ].filter(Boolean).join(' ');
-
-          html += `<div id="c_${dr.id}_${d}" class="${cellClasses}"
-            onclick="openCellEdit(${dr.id},${d})"
-            ondblclick="openPicker(${dr.id},${d})"
-            oncontextmenu="showCtxMenu(event,${dr.id},${d})"
-            ondragover="cellDragOver(event,this)"
-            ondragleave="cellDragLeave(this)"
-            ondrop="cellDrop(event,${dr.id},${d})">`;
-
-          if (code) {
-            html += `<div class="shift-card"
-              draggable="true"
-              ondragstart="cellDragStart(event,${dr.id},${d})"
-              ondragend="cellDragEnd()"
-              style="background:${cst.bg};color:${cst.fg};border-color:${cst.br}"
-              title="${esc(codeLabel(code))}"
-            >${esc(code)}</div>`;
-          }
-          html += `</div>`; // shift-cell
-        }
-
-        // Weekly total
-        html += `<div class="tot-cell">${weekTotal}</div>`;
-        html += `</div>`; // emp-row
-      }
-    }
-
-    html += `</div>`; // group-block
-  }
-
-  document.getElementById('boardInner').innerHTML = html;
-
-  // Re-apply drag handlers from UX upgrade
-  if (typeof _attachDragHandlers === 'function') {
-    requestAnimationFrame(_attachDragHandlers);
-  }
-  if (typeof _enhanceChipColors === 'function') {
-    requestAnimationFrame(_enhanceChipColors);
-  }
-};
-
-// ── Toggle group collapse ──────────────────────────────────────
-function toggleGroup(cls) {
-  if (_collapsedGroups.has(cls)) _collapsedGroups.delete(cls);
-  else _collapsedGroups.add(cls);
-  renderGrid();
-}
-
-// ── Go to today (snap week to contain today) ──────────────────
-function goToToday() {
-  const todayISO = new Date().toISOString().slice(0, 7);
-  if (todayISO !== YM) {
-    YM = todayISO; weekIdx = 0; loadMonth(); return;
-  }
-  const weeks = monthWeeks();
-  const todayDay = new Date().getDate();
-  weekIdx = 0;
-  for (let i = 0; i < weeks.length; i++) {
-    if (weeks[i].days.includes(todayDay)) { weekIdx = i; break; }
-  }
-  renderGrid();
-}
-
-// ── Toolbar week nav ───────────────────────────────────────────
-function shiftWeek(dir) {
-  if (planMode === 'week') {
-    const weeks = monthWeeks();
-    weekIdx = Math.max(0, Math.min(weeks.length - 1, weekIdx + dir));
-    renderGrid();
-  } else {
-    shiftMonth(dir);
-  }
-}
-
-// ── Context menu for cells ─────────────────────────────────────
-let _ctxCtx = null;
-let _clipboard = null;
-
-function showCtxMenu(event, driverId, day) {
-  event.preventDefault();
-  _ctxCtx = { driverId, day };
-  const menu = document.getElementById('ctxMenu');
-  menu.style.left = Math.min(event.clientX, window.innerWidth - 180) + 'px';
-  menu.style.top = Math.min(event.clientY, window.innerHeight - 160) + 'px';
-  menu.classList.add('open');
-
-  // Show/hide paste based on clipboard
-  const paste = document.getElementById('ctx-paste');
-  if (paste) paste.style.display = _clipboard ? 'flex' : 'none';
-}
-
-document.addEventListener('click', () => {
-  const m = document.getElementById('ctxMenu');
-  if (m) m.classList.remove('open');
-});
-
-function ctxAction(action) {
-  if (!_ctxCtx) return;
-  const { driverId, day } = _ctxCtx;
-  const code = getCode(driverId, day);
-
-  if (action === 'edit') { openPanel(driverId, day); }
-  else if (action === 'copy') {
-    _clipboard = code;
-    if (typeof showKbdHint === 'function') showKbdHint('📋 Copiato: ' + (code || 'vuoto'));
-    else toast('Copiato: ' + (code || 'vuoto'));
-  }
-  else if (action === 'paste') {
-    if (_clipboard !== null) {
-      if (typeof pushUndo === 'function') pushUndo(JSON.parse(JSON.stringify(state.schedule)));
-      commitCell(driverId, day, _clipboard);
-      renderGrid();
-    }
-  }
-  else if (action === 'duplicate') {
-    if (code) {
-      const dow_ = dow(YM, day);
-      const days = daysInMonth(YM);
-      if (typeof pushUndo === 'function') pushUndo(JSON.parse(JSON.stringify(state.schedule)));
-      let count = 0;
-      for (let d = 1; d <= days; d++) {
-        if (dow(YM, d) === dow_) { commitCell(driverId, d, code); count++; }
-      }
-      toast('Turno duplicato su ' + count + ' giorni');
-      renderGrid();
-    }
-  }
-  else if (action === 'delete') {
-    if (typeof pushUndo === 'function') pushUndo(JSON.parse(JSON.stringify(state.schedule)));
-    commitCell(driverId, day, '');
-    renderGrid();
-  }
-}
-
-// ── Board-level drag & drop (board cells) ─────────────────────
-// These complement the existing UX upgrade D&D from index.html
-let _boardDragSrc = null;
-
-function cellDragStart(event, driverId, day) {
-  _boardDragSrc = { driverId, day, code: getCode(driverId, day) };
-  event.dataTransfer.effectAllowed = 'copyMove';
-  event.target.classList.add('dragging');
-}
-
-function cellDragEnd() {
-  document.querySelectorAll('.shift-card.dragging').forEach(el => el.classList.remove('dragging'));
-  _boardDragSrc = null;
-}
-
-function cellDragOver(event, cell) {
-  if (!_boardDragSrc) return;
-  event.preventDefault();
-  const isCopy = event.altKey || event.ctrlKey;
-  cell.classList.toggle('drag-over', !isCopy);
-  cell.classList.toggle('copy-over', isCopy);
-  event.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
-}
-
-function cellDragLeave(cell) {
-  cell.classList.remove('drag-over', 'copy-over');
-}
-
-function cellDrop(event, tgtId, tgtDay) {
-  event.preventDefault();
-  const cell = event.currentTarget;
-  cell.classList.remove('drag-over', 'copy-over');
-  if (!_boardDragSrc) return;
-
-  const isCopy = event.altKey || event.ctrlKey;
-  const { driverId: srcId, day: srcDay, code } = _boardDragSrc;
-  if (srcId === tgtId && srcDay === tgtDay) return;
-
-  if (typeof pushUndo === 'function') pushUndo(JSON.parse(JSON.stringify(state.schedule)));
-
-  commitCell(tgtId, tgtDay, code);
-  if (!isCopy) commitCell(srcId, srcDay, '');
-
-  toast((isCopy ? '📋 Copiato' : '↕ Spostato') + ': ' + (code || 'vuoto'));
-  renderGrid();
-}
-
-// ── setView override to handle new toolbar visibility ──────────
-const _origSetView = setView;
-setView = function(v) {
-  _origSetView(v);
-  // Update new nav tabs
-  document.querySelectorAll('.nav-tab').forEach(b => {
-    b.classList.toggle('on', b.dataset.v === v);
-  });
-  // Show/hide planning toolbar
-  const tb = document.getElementById('planToolbar');
-  if (tb) tb.style.display = v === 'plan' ? '' : 'none';
-  // Bottom bar always visible
-};
-
-// ── openPanel override (use slide panel, not inline picker) ────
-// openPanel is already defined by the UX upgrade — it will open
-// the #slidePanel when double-clicking. Single-click opens inline
-// edit which is handled by openCellEdit in the original code.
-
-// ── Keyboard: Ctrl+S, Ctrl+Z etc. already in UX upgrade ───────
-// Add: ESC closes context menu
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    const m = document.getElementById('ctxMenu');
-    if (m) m.classList.remove('open');
-  }
-});
-
-
-/* ══════════════════════════════════════════════════════════════
-   PLATFORM UI LAYER — overrides renderGrid with Monday-style board
-   All business logic above is untouched.
-   ══════════════════════════════════════════════════════════════ */
-
-// ── Sidebar nav init ──────────────────────────────────────────────
-(function initNavUser() {
+// ── Auth guard ────────────────────────────────────────────────────
+(function() {
   var tok = localStorage.getItem('turnidsp_token');
   var u = null; try { u = JSON.parse(localStorage.getItem('turnidsp_user')); } catch(e) {}
-  if (!tok || !u) { (window.top||window).location.replace('login.html'); return; }
+  if (!tok || !u) { location.replace('login.html'); return; }
+
+  // Set user in globals
   var name = u.full_name || u.username || '—';
   var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
-  var navAv = document.getElementById('navAvatar');
-  var navUn = document.getElementById('navUname');
-  var navRo = document.getElementById('navRole');
-  if(navAv) navAv.textContent = initials;
-  if(navUn) navUn.textContent = name;
-  if(navRo) navRo.textContent = { admin:'Amministratore', osm:'OSM', hr_manager:'HR Manager', team_leader:'Team Leader' }[u.role] || u.role;
-  if(u.role==='admin') document.body.classList.add('is-admin');
-  // Sync pill
-  var sp = document.getElementById('navSync');
-  if(sp) sp.textContent = '🟢 PostgreSQL';
+  document.getElementById('navAvatar').textContent = initials;
+  document.getElementById('navUname').textContent = name;
+  document.getElementById('navRole').textContent = {
+    admin:'Amministratore', osm:'OSM', hr_manager:'HR Manager', team_leader:'Team Leader'
+  }[u.role] || u.role;
+
+  if (u.role === 'admin') {
+    document.body.classList.add('is-admin');
+  }
+
+  // ── Init scheduler auth (mimics the IIFE from original scheduler) ──
+  var platformAdmin = u.role === 'admin';
+  loadMonth();
+  if (platformAdmin) {
+    ROLE = 'admin'; teamLocked = false; currentUser = u.full_name || u.username || 'admin';
+    localStorage.setItem('turniDSP_role', 'admin'); saveSession();
+  } else {
+    var sess = null; try { sess = JSON.parse(localStorage.getItem('turniDSP_session')); } catch(e) {}
+    if (sess && sess.role === 'team' && sess.locked && users().some(function(usr){ return usr.username === sess.user; })) {
+      ROLE = 'team'; teamLocked = true; currentUser = sess.user; teamFiliale = sess.filiale;
+    } else {
+      ROLE = 'team'; teamLocked = false; currentUser = u.full_name || u.username || 'team';
+    }
+  }
+  ensureTeamFiliale(); applyRole(); refreshFilSelects();
+  // Don't call refreshAll() here — the scheduler will render when its section is shown
 })();
 
-function doLogout() {
-  if(typeof TurniApi !== 'undefined' && TurniApi.logout) TurniApi.logout().catch(function(){});
-  (window.top||window).location.replace('login.html');
+// ── Logout ────────────────────────────────────────────────────────
+// doLogout() defined in SPA layer below
+
+// ── SPA Router ───────────────────────────────────────────────────
+var _currentSection = 'dashboard';
+var _schedInited = false;
+var _dashInited = false;
+var _reportsInited = false;
+
+var SECTION_TITLES = {
+  dashboard: 'Dashboard',
+  scheduler: 'Scheduler Turni',
+  employees: 'Dipendenti',
+  reports:   'Report & Analytics',
+  settings:  'Impostazioni',
+};
+
+function navigate(section, opts) {
+  opts = opts || {};
+  _currentSection = section;
+
+  // Update all sections
+  document.querySelectorAll('.spa-section').forEach(function(el) {
+    el.classList.toggle('active', el.id === 'sec-' + section);
+  });
+
+  // Update sidebar nav links
+  document.querySelectorAll('.nav-link[data-section]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.section === section);
+  });
+
+  // Update page title
+  document.getElementById('pageTitle').textContent = SECTION_TITLES[section] || section;
+  document.getElementById('pageSubtitle').textContent = '';
+
+  // Show/hide section-specific header controls
+  var schedHeader = document.getElementById('schedHeader');
+  var dashHeader  = document.getElementById('dashHeader');
+  var schedSubnav = document.getElementById('sched-subnav');
+  var planToolbar = document.getElementById('planToolbar');
+
+  if (section === 'scheduler') {
+    schedHeader.style.display = 'flex';
+    dashHeader.style.display  = 'none';
+    schedSubnav.style.display = 'block';
+    if (planToolbar) planToolbar.style.display = '';
+
+    // Init scheduler once
+    if (!_schedInited) {
+      _schedInited = true;
+    }
+    // Apply any filters passed from dashboard
+    if (opts.branch) {
+      teamFiliale = opts.branch;
+      ensureTeamFiliale();
+    }
+    if (opts.filterStatus) {
+      var fs = document.getElementById('fStato');
+      if (fs) { fs.value = opts.filterStatus; }
+    }
+    refreshAll();
+
+  } else if (section === 'dashboard') {
+    schedHeader.style.display = 'none';
+    dashHeader.style.display  = 'flex';
+    schedSubnav.style.display = 'none';
+
+    if (!_dashInited) {
+      _dashInited = true;
+      bootDashboard();
+    } else {
+      // Refresh KPIs with latest scheduler state (shared state!)
+      syncSchedulerToDashboard();
+    }
+
+  } else if (section === 'reports') {
+    schedHeader.style.display = 'none';
+    dashHeader.style.display  = 'none';
+    schedSubnav.style.display = 'none';
+    if (!_reportsInited) {
+      _reportsInited = true;
+      renderReportCharts();
+    }
+
+  } else if (section === 'settings') {
+    schedHeader.style.display = 'none';
+    dashHeader.style.display  = 'none';
+    schedSubnav.style.display = 'none';
+    loadUsers();
+
+  } else {
+    schedHeader.style.display = 'none';
+    dashHeader.style.display  = 'none';
+    schedSubnav.style.display = 'none';
+  }
+
+  // Update browser URL without reload
+  try { history.pushState({ section: section }, '', '#' + section); } catch(e) {}
 }
 
-// ── Undo/Redo ────────────────────────────────────────────────────
-// Undo/redo uses existing stack from base JS
+// Handle browser back/forward
+window.addEventListener('popstate', function(e) {
+  var section = (e.state && e.state.section) || location.hash.replace('#', '') || 'dashboard';
+  navigate(section);
+});
 
-// ── Autosave / kbd hint ───────────────────────────────────────────
-var _autoTimer=null;
-function showAutosave(st) {
-  var el=document.getElementById('autosaveIndicator');
-  var icon=document.getElementById('autosaveIcon');
-  var txt=document.getElementById('autosaveText');
-  if(!el) return;
-  el.className='show '+st;
-  if(st==='saving'){icon.textContent='⏳';txt.textContent='Salvataggio…';}
-  else if(st==='saved'){icon.textContent='✓';txt.textContent='Salvato';}
-  else if(st==='error'){icon.textContent='✗';txt.textContent='Errore salvataggio';}
-  clearTimeout(_autoTimer);
-  _autoTimer=setTimeout(function(){el.classList.remove('show');},2200);
-}
-function setSaveState(st) {
-  var el=document.getElementById('saveState');
-  if(!el) return;
-  if(st==='saving'){el.className='save-pill saving';el.textContent='⏳ salvataggio…';}
-  else if(st==='saved'){el.className='save-pill saved';el.textContent='✓ salvato '+ new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});}
-  else if(st==='error'){el.className='save-pill error';el.textContent='✗ errore DB';}
-  else if(st==='queued'){el.className='save-pill';el.textContent='⏳ in coda…';}
-  else if(st==='local'){el.className='save-pill';el.textContent='💾 locale';}
-  var ns=document.getElementById('navSync');
-  if(ns&&DB_SYNC) ns.textContent = st==='saved'?'🟢 DB OK': st==='error'?'🔴 DB errore':'🔵 In sync…';
-}
-function showLoadingOverlay(show) {
-  var ov=document.getElementById('dbLoadOverlay');
-  if(show&&!ov){
-    ov=document.createElement('div'); ov.id='dbLoadOverlay';
-    ov.style.cssText='position:fixed;top:65px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 18px;font-size:.8rem;font-weight:600;color:var(--brand);box-shadow:var(--shadow-lg);z-index:400;display:flex;align-items:center;gap:7px';
-    ov.innerHTML='<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Caricamento da database…';
-    document.body.appendChild(ov);
-  } else if(!show&&ov) ov.remove();
-}
-var _hintTimer=null;
-function showKbdHint(msg) {
-  var el=document.getElementById('kbdHint');
-  if(!el)return; el.textContent=msg; el.classList.add('show');
-  clearTimeout(_hintTimer); _hintTimer=setTimeout(function(){el.classList.remove('show');},1400);
+// ── Sync scheduler state to dashboard ────────────────────────────
+// When scheduler has data, update the dashboard KPIs without an API call
+// by passing the live state from the scheduler's in-memory model.
+function syncSchedulerToDashboard() {
+  if (typeof state !== 'undefined' && state && state.drivers && state.drivers.length) {
+    // Trigger a KPI refresh using fresh data
+    refreshAll();
+  }
 }
 
-// ── setView override ──────────────────────────────────────────────
-var _origSetView2 = setView;
-setView = function(v) {
-  _origSetView2(v);
-  document.querySelectorAll('.nav-link[data-v]').forEach(function(b){
+// ── Navigate from dashboard widget click to scheduler ────────────
+function openSchedulerWithFilter(filterStatus) {
+  navigate('scheduler', { filterStatus: filterStatus });
+}
+
+// ── Scheduler sub-view navigation ────────────────────────────────
+function schedSetView(v) {
+  setView(v);
+  // Update sidebar scheduler sub-nav
+  document.querySelectorAll('#sched-subnav .nav-link[data-v]').forEach(function(b) {
     b.classList.toggle('active', b.dataset.v === v);
   });
-  var tb = document.getElementById('planToolbar');
-  if(tb) tb.style.display = v==='plan' ? '' : 'none';
-};
+  var planToolbar = document.getElementById('planToolbar');
+  if (planToolbar) planToolbar.style.display = v === 'plan' ? '' : 'none';
+}
 
-// ── shiftMonth hooked for navSync update ──────────────────────────
-var _origShiftMonth = shiftMonth;
-shiftMonth = function(n) {
-  _origShiftMonth(n);
-};
+// ── setSaveState (SPA version - updates both places) ─────────────
+function setSaveState(st) {
+  var el1 = document.getElementById('saveState');
+  var el2 = document.getElementById('schedSaveState');
+  var ns  = document.getElementById('navSync');
+  var text = '';
+  if (st === 'saving') text = '⏳ salvataggio…';
+  else if (st === 'saved')  text = '✓ salvato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
+  else if (st === 'error')  text = '✗ errore DB';
+  else if (st === 'queued') text = '⏳ in coda…';
+  else if (st === 'local')  text = '💾 locale';
+  if (el1) el1.textContent = text;
+  if (el2) el2.textContent = text;
+  if (ns && DB_SYNC) {
+    ns.textContent = st==='saved'?'🟢 DB OK': st==='error'?'🔴 DB errore':'🔵 In sync…';
+  }
+}
 
-// ── saveAll hook ─────────────────────────────────────────────────
+// ── saveAll override for SPA ──────────────────────────────────────
 var _origSaveAll = saveAll;
 saveAll = function(manual) {
   setSaveState(DB_SYNC ? 'queued' : 'local');
-  if(manual) toast(DB_SYNC ? 'Salvataggio in corso…' : 'Dati salvati in locale');
-  if(DB_SYNC) { clearTimeout(dbSyncTimer); dbSyncTimer=setTimeout(saveMonthToDB,1200); }
-  else { try{localStorage.setItem(lsKey(YM),JSON.stringify(state));}catch(_){} }
+  if (manual) toast(DB_SYNC ? 'Salvataggio in corso…' : 'Dati salvati in locale');
+  if (DB_SYNC) { clearTimeout(dbSyncTimer); dbSyncTimer = setTimeout(saveMonthToDB, 1200); }
+  else { try { localStorage.setItem(lsKey(YM), JSON.stringify(state)); } catch(_) {} }
 };
 
-// ── CLS → colors map (using platform.css vars) ───────────────────
-var CLS_COLORS = {
-  next:  { bg:'var(--next-bg)',  fg:'var(--next)',  br:'var(--next-br)',  av:'#92400E' },
-  samea: { bg:'var(--samea-bg)', fg:'var(--samea)', br:'var(--samea-br)', av:'#1E40AF' },
-  sameb: { bg:'var(--sameb-bg)', fg:'var(--sameb)', br:'var(--sameb-br)', av:'#5B21B6' },
-  mm:    { bg:'var(--mm-bg)',    fg:'var(--mm)',    br:'var(--mm-br)',    av:'#065F46' },
-  abs:   { bg:'var(--abs-bg)',   fg:'var(--abs)',   br:'var(--abs-br)',   av:'#374151' },
-  mal:   { bg:'var(--mal-bg)',   fg:'var(--mal)',   br:'var(--mal-br)',   av:'#991B1B' },
-  off:   { bg:'var(--off-bg)',   fg:'var(--off)',   br:'var(--off-br)',   av:'#374151' },
+// ── setView override (SPA toolbar sync) ──────────────────────────
+var _origSetViewSPA = setView;
+setView = function(v) {
+  _origSetViewSPA(v);
+  var planToolbar = document.getElementById('planToolbar');
+  if (planToolbar) planToolbar.style.display = v === 'plan' ? '' : 'none';
 };
-function getCLS(cls){ return CLS_COLORS[cls] || CLS_COLORS.abs; }
 
-// ── Group drivers by service ──────────────────────────────────────
-var _collapsed = new Set();
-function buildGroups(drivers) {
-  var groups = CFG().groups;
-  var result = []; var used = {};
-  for(var gi=0; gi<groups.length; gi++) {
-    var g = groups[gi];
-    var drv = drivers.filter(function(d){
-      var dc = codeMeta(d.defaultCode || defCode(d.service)).cls || 'abs';
-      return dc===g.cls && !used[d.id];
-    });
-    if(drv.length>0) { drv.forEach(function(d){used[d.id]=1;}); result.push({cls:g.cls,name:g.name,drivers:drv}); }
-  }
-  var leftover = drivers.filter(function(d){return !used[d.id];});
-  if(leftover.length) result.push({cls:'abs',name:'Altri',drivers:leftover});
-  return result;
+// ── Autosave indicator ────────────────────────────────────────────
+var _autoTimer = null;
+function showAutosave(st) {
+  var el = document.getElementById('autosaveIndicator');
+  var icon = document.getElementById('autosaveIcon');
+  var txt  = document.getElementById('autosaveText');
+  if (!el) return;
+  el.className = 'show ' + st;
+  if (st==='saving') { icon.textContent='⏳'; txt.textContent='Salvataggio…'; }
+  else if (st==='saved') { icon.textContent='✓'; txt.textContent='Salvato'; }
+  else if (st==='error') { icon.textContent='✗'; txt.textContent='Errore salvataggio'; }
+  clearTimeout(_autoTimer);
+  _autoTimer = setTimeout(function(){ el.classList.remove('show'); }, 2200);
 }
 
-// ── Main board renderer ───────────────────────────────────────────
+function showLoadingOverlay(show) {
+  var ov = document.getElementById('dbLoadOverlay');
+  if (show && !ov) {
+    ov = document.createElement('div'); ov.id = 'dbLoadOverlay';
+    ov.style.cssText = 'position:fixed;top:65px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 18px;font-size:.8rem;font-weight:600;color:var(--brand);box-shadow:var(--shadow-lg);z-index:400;display:flex;align-items:center;gap:7px';
+    ov.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Caricamento da database…';
+    document.body.appendChild(ov);
+  } else if (!show && ov) ov.remove();
+}
+
+var _hintTimer = null;
+function showKbdHint(msg) {
+  var el = document.getElementById('kbdHint');
+  if (!el) return; el.textContent = msg; el.classList.add('show');
+  clearTimeout(_hintTimer); _hintTimer = setTimeout(function(){ el.classList.remove('show'); }, 1400);
+}
+
+// ── Undo/Redo (SPA wrappers) ──────────────────────────────────────
+function spaDoUndo() { if(typeof doUndo==='function') doUndo(); }
+function spaDoRedo() { if(typeof doRedo==='function') doRedo(); }
+
+// ── Board renderGrid (Monday-style) ──────────────────────────────
+var CLS_COLORS_SPA = {
+  next:  {bg:'var(--next-bg)', fg:'var(--next)', br:'var(--next-br)', av:'#92400E'},
+  samea: {bg:'var(--samea-bg)',fg:'var(--samea)',br:'var(--samea-br)',av:'#1E40AF'},
+  sameb: {bg:'var(--sameb-bg)',fg:'var(--sameb)',br:'var(--sameb-br)',av:'#5B21B6'},
+  mm:    {bg:'var(--mm-bg)',   fg:'var(--mm)',   br:'var(--mm-br)',   av:'#065F46'},
+  abs:   {bg:'var(--abs-bg)',  fg:'var(--abs)',  br:'var(--abs-br)',  av:'#374151'},
+  mal:   {bg:'var(--mal-bg)',  fg:'var(--mal)',  br:'var(--mal-br)',  av:'#991B1B'},
+  off:   {bg:'var(--off-bg)',  fg:'var(--off)',  br:'var(--off-br)',  av:'#374151'},
+};
+function getCLS(c){ return CLS_COLORS_SPA[c] || CLS_COLORS_SPA.abs; }
+var _grpCollapsed = new Set();
+function buildGroups(drivers) {
+  var groups=CFG().groups, result=[], used={};
+  for(var gi=0;gi<groups.length;gi++){
+    var g=groups[gi];
+    var drv=drivers.filter(function(d){
+      var dc=codeMeta(d.defaultCode||defCode(d.service)).cls||'abs';
+      return dc===g.cls&&!used[d.id];
+    });
+    if(drv.length>0){drv.forEach(function(d){used[d.id]=1;});result.push({cls:g.cls,name:g.name,drivers:drv});}
+  }
+  var lo=drivers.filter(function(d){return !used[d.id];});
+  if(lo.length) result.push({cls:'abs',name:'Altri',drivers:lo});
+  return result;
+}
+function toggleGroup(cls){
+  if(_grpCollapsed.has(cls))_grpCollapsed.delete(cls); else _grpCollapsed.add(cls);
+  renderGrid();
+}
+
 renderGrid = function() {
-  // Compute visible days
   var allDays=[]; for(var dd=1;dd<=daysInMonth(YM);dd++) allDays.push(dd);
   var weeks=monthWeeks();
-  if(weekIdx>=weeks.length) weekIdx=weeks.length-1;
-  if(weekIdx<0) weekIdx=0;
-  var visDays = planMode==='week' ? (weeks[weekIdx]?weeks[weekIdx].days:allDays) : allDays;
-
-  // Update header label
+  if(weekIdx>=weeks.length)weekIdx=weeks.length-1;
+  if(weekIdx<0)weekIdx=0;
+  var visDays=planMode==='week'?(weeks[weekIdx]?weeks[weekIdx].days:allDays):allDays;
+  // Header label
   var mNames=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   var ym=YM.split('-').map(Number);
-  var label = mNames[ym[1]-1]+' '+ym[0];
-  if(planMode==='week'&&weeks.length){ var w=weeks[weekIdx]; label+='  ·  Week '+w.week+' · '+fmtDM(YM,w.days[0])+'–'+fmtDM(YM,w.days[w.days.length-1]); }
+  var label=mNames[ym[1]-1]+' '+ym[0];
+  if(planMode==='week'&&weeks.length){var w=weeks[weekIdx];label+='  ·  Week '+w.week+' · '+fmtDM(YM,w.days[0])+'–'+fmtDM(YM,w.days[w.days.length-1]);}
   var ml=document.getElementById('monthLabel'); if(ml) ml.textContent=label;
   var ps=document.getElementById('planScope'); if(ps) ps.textContent='';
   var wn=document.getElementById('weekNav'); if(wn) wn.style.display='none';
-
-  var now=new Date(), nowISO=now.toISOString().slice(0,7), nowDay=now.getDate();
-  var all=scopedActive(), drivers=filteredDrivers();
-  gridRefDay = (nowISO===YM&&visDays.includes(nowDay)) ? nowDay : visDays[0];
-  gridDrivers=drivers; gridDays=visDays; refreshCodeList();
-
-  // ── Bottom KPI bar ────────────────────────────────────────────
+  var now=new Date(),nowISO=now.toISOString().slice(0,7),nowDay=now.getDate();
+  var all=scopedActive(),drivers=filteredDrivers();
+  gridRefDay=(nowISO===YM&&visDays.includes(nowDay))?nowDay:visDays[0];
+  gridDrivers=drivers;gridDays=visDays;refreshCodeList();
+  // Bottom KPIs
   var kPres=0,kAbs=0,kOff=0,kViols=0;
   all.forEach(function(dr){
-    var c=getCode(dr.id,gridRefDay); if(!c)return;
+    var c=getCode(dr.id,gridRefDay);if(!c)return;
     var cls=codeCls(c);
-    if(c.toUpperCase()==='OFF') kOff++;
-    else if(cls==='mal') kAbs++;
-    else kPres++;
-    if(driverHasViolation(dr)) kViols++;
+    if(c.toUpperCase()==='OFF')kOff++;else if(cls==='mal')kAbs++;else kPres++;
+    if(driverHasViolation(dr))kViols++;
   });
   var svs=scopeServices(),fcT=0,plT=0;
-  svs.forEach(function(s){ visDays.forEach(function(d){ fcT+=forecastOf(s,d); plT+=cnt(dayCodes(d,all),s.count); }); });
-  var covPct = fcT>0 ? Math.round(plT/fcT*100)+'%' : '—';
+  svs.forEach(function(s){visDays.forEach(function(d){fcT+=forecastOf(s,d);plT+=cnt(dayCodes(d,all),s.count);});});
   function setEl(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
-  setEl('kpiDrivers',all.length); setEl('kpiPresent',kPres); setEl('kpiAbsent',kAbs);
-  setEl('kpiOff',kOff); setEl('kpiFc',fcT||'—'); setEl('kpiCov',covPct);
-  setEl('kpiViol',kViols); setEl('kpiSyncBar',DB_SYNC?'🟢 DB':'🟡 locale');
-  // Legacy stats for compat
-  setEl('statDrivers',all.length); setEl('statPresent',kPres); setEl('statAbsent',kAbs); setEl('statOff',kOff);
-  var ss=document.getElementById('statSync'); if(ss) ss.textContent=DB_SYNC?'🟢 DB sync':'🔴 locale';
-
-  // ── Violation banner ──────────────────────────────────────────
-  var viols=all.filter(driverHasViolation), vb=document.getElementById('violBanner');
-  if(vb){
-    if(viols.length){ vb.style.display='block'; vb.innerHTML='<b>⚠️ Attenzione riposi:</b> '+viols.length+' DAS con 7+ giorni consecutivi: '+viols.slice(0,5).map(function(d){return esc(d.cognome);}).join(', ')+(viols.length>5?'…':'')+'.'; }
-    else vb.style.display='none';
-  }
-
-  // ── Grid columns CSS var ──────────────────────────────────────
-  var colT = '205px repeat('+visDays.length+', 50px) 38px';
-  document.documentElement.style.setProperty('--grid-cols', colT);
-
-  // ── Build HTML ────────────────────────────────────────────────
+  setEl('kpiDrivers',all.length);setEl('kpiPresent',kPres);setEl('kpiAbsent',kAbs);
+  setEl('kpiOff',kOff);setEl('kpiFc',fcT||'—');setEl('kpiCov',fcT>0?Math.round(plT/fcT*100)+'%':'—');
+  setEl('kpiViol',kViols);setEl('kpiSyncBar',DB_SYNC?'🟢 DB':'🟡 locale');
+  // Legacy compat
+  setEl('statDrivers',all.length);setEl('statPresent',kPres);setEl('statAbsent',kAbs);setEl('statOff',kOff);
+  // Violation banner
+  var viols=all.filter(driverHasViolation),vb=document.getElementById('violBanner');
+  if(vb){if(viols.length){vb.style.display='block';vb.innerHTML='<b>⚠️ Attenzione riposi:</b> '+viols.length+' DAS con 7+ giorni consecutivi: '+viols.slice(0,5).map(function(d){return esc(d.cognome);}).join(', ')+(viols.length>5?'…':'')+'.';} else vb.style.display='none';}
+  // Grid layout
+  var colT='205px repeat('+visDays.length+',50px) 38px';
+  document.documentElement.style.setProperty('--grid-cols',colT);
   var html='';
-
-  // Column headers row
-  html += '<div class="board-thead" style="grid-template-columns:'+colT+'">';
-  html += '<div class="col-emp-h">DAS / Servizio</div>';
+  // Column headers
+  html+='<div class="board-thead" style="grid-template-columns:'+colT+'">';
+  html+='<div class="col-emp-h">DAS / Servizio</div>';
   visDays.forEach(function(d){
-    var isToday=nowISO===YM&&d===nowDay;
-    var isWend=[0,6].includes(new Date(YM+'-'+String(d).padStart(2,'0')).getDay());
-    html += '<div class="col-day-h'+(isToday?' today-h':'')+(isWend?' wend-h':'')+'"><span class="dow">'+dowName(YM,d).toUpperCase()+'</span><span class="dnum">'+d+'</span></div>';
+    var isT=nowISO===YM&&d===nowDay;
+    var isW=[0,6].includes(new Date(YM+'-'+String(d).padStart(2,'0')).getDay());
+    html+='<div class="col-day-h'+(isT?' today-h':'')+(isW?' wend-h':'')+'">'+'<span class="dow">'+dowName(YM,d).toUpperCase()+'</span><span class="dnum">'+d+'</span></div>';
   });
-  html += '<div class="col-tot-h">SEM</div></div>';
-
+  html+='<div class="col-tot-h">SEM</div></div>';
   if(!drivers.length){
-    html += '<div class="board-empty"><div class="ei">👥</div><p>Nessun DAS'+( scopeFil()?' per '+esc(scopeFil()):'')+'. Aggiungilo da "Anagrafica DAS".</p></div>';
-    document.getElementById('boardInner').innerHTML=html; return;
+    html+='<div class="board-empty"><div class="ei">👥</div><p>Nessun DAS'+(scopeFil()?' per '+esc(scopeFil()):'')+'. Aggiungilo da "Anagrafica DAS".</p></div>';
+    document.getElementById('boardInner').innerHTML=html;return;
   }
-
   var groups=buildGroups(drivers);
   groups.forEach(function(grp){
-    var st=getCLS(grp.cls), collapsed=_collapsed.has(grp.cls);
-    html += '<div class="group-block'+(collapsed?' collapsed':'')+'" data-grp="'+esc(grp.cls)+'">';
-    // Group header
-    html += '<div class="group-header-row" style="grid-template-columns:'+colT+'">';
-    html += '<div class="gh-cell" onclick="toggleGroup(\''+grp.cls+'\')"><span class="gh-arrow">▼</span><span class="gh-dot" style="background:'+st.fg+'"></span>'+esc(grp.name)+'<span class="gh-count">'+grp.drivers.length+'</span></div>';
+    var st=getCLS(grp.cls),collapsed=_grpCollapsed.has(grp.cls);
+    html+='<div class="group-block'+(collapsed?' collapsed':'')+'\">';
+    html+='<div class="group-header-row" style="grid-template-columns:'+colT+'">';
+    html+='<div class="gh-cell" onclick="toggleGroup(\''+grp.cls+'\')"><span class="gh-arrow">▼</span><span class="gh-dot" style="background:'+st.fg+'"></span>'+esc(grp.name)+'<span class="gh-count">'+grp.drivers.length+'</span></div>';
     for(var gi=0;gi<visDays.length;gi++) html+='<div style="background:'+st.bg+';opacity:.3;border-right:1px solid var(--line)"></div>';
-    html+='<div style="background:'+st.bg+';opacity:.3"></div>';
-    html+='</div>';
-
+    html+='<div style="background:'+st.bg+';opacity:.3"></div></div>';
     if(!collapsed){
       grp.drivers.forEach(function(dr){
-        var vflag=consecutiveFlag(dr), viol=Object.keys(vflag).length>0;
+        var vflag=consecutiveFlag(dr),viol=Object.keys(vflag).length>0;
         var initials=((dr.cognome||'')[0]||'').toUpperCase()+((dr.nome||'')[0]||'').toUpperCase();
         var wTotal=workedDays(dr,visDays);
-        html += '<div class="emp-board-row" style="grid-template-columns:'+colT+'">';
-        html += '<div class="emp-cell">'+(viol?'<span class="viol-dot" title="7+ giorni consecutivi">⚠</span>':'')+
+        html+='<div class="emp-board-row" style="grid-template-columns:'+colT+'">';
+        html+='<div class="emp-cell">'+(viol?'<span class="viol-dot" title="7+ giorni consecutivi">⚠</span>':'')+
           '<div class="emp-avatar" style="background:'+st.av+'">'+esc(initials)+'</div>'+
           '<div style="min-width:0"><div class="emp-name-text">'+esc(dr.cognome)+' '+esc(dr.nome)+'</div>'+
           '<div class="emp-sub-text">'+esc(dr.filiale)+' · '+esc(dr.contratto||'—')+'</div></div></div>';
         visDays.forEach(function(d){
-          var code=getCode(dr.id,d), cls=codeCls(code), cst=getCLS(cls);
-          var isToday=nowISO===YM&&d===nowDay;
-          var isWend=[0,6].includes(new Date(YM+'-'+String(d).padStart(2,'0')).getDay());
-          var isViol=!!vflag[d];
-          var cellCls='shift-cell'+(isToday?' today-sc':'')+(isWend?' wend-sc':'')+(isViol?' viol-sc':'');
-          html += '<div id="c_'+dr.id+'_'+d+'" class="'+cellCls+'"'+
+          var code=getCode(dr.id,d),cls=codeCls(code),cst=getCLS(cls);
+          var isT=nowISO===YM&&d===nowDay,isW=[0,6].includes(new Date(YM+'-'+String(d).padStart(2,'0')).getDay()),isV=!!vflag[d];
+          html+='<div id="c_'+dr.id+'_'+d+'" class="shift-cell'+(isT?' today-sc':'')+(isW?' wend-sc':'')+(isV?' viol-sc':'')+'"'+
             ' onclick="openCellEdit('+dr.id+','+d+')"'+
-            ' ondblclick="openPicker('+dr.id+','+d+')"'+
-            ' oncontextmenu="showCtxMenu(event,'+dr.id+','+d+')"'+
+            ' ondblclick="spOpenPanel('+dr.id+','+d+')"'+
+            ' oncontextmenu="boardCtxOpen(event,'+dr.id+','+d+')"'+
             ' ondragover="boardDragOver(event,this)"'+
             ' ondragleave="boardDragLeave(this)"'+
             ' ondrop="boardDrop(event,'+dr.id+','+d+')">';
           if(code){
-            html += '<div class="shift-card"'+
-              ' draggable="true"'+
+            html+='<div class="shift-card" draggable="true"'+
               ' ondragstart="boardDragStart(event,'+dr.id+','+d+')"'+
               ' ondragend="boardDragEnd()"'+
               ' style="background:'+cst.bg+';color:'+cst.fg+';border-color:'+cst.br+'"'+
               ' title="'+esc(codeLabel(code))+'">'+esc(code)+'</div>';
           }
-          html += '</div>';
+          html+='</div>';
         });
-        html += '<div class="tot-sc">'+wTotal+'</div>';
-        html += '</div>';
+        html+='<div class="tot-sc">'+wTotal+'</div></div>';
       });
     }
-    html += '</div>';
+    html+='</div>';
   });
-
-  document.getElementById('boardInner').innerHTML = html;
+  document.getElementById('boardInner').innerHTML=html;
 };
 
-// ── Group toggle ─────────────────────────────────────────────────
-function toggleGroup(cls) {
-  if(_collapsed.has(cls)) _collapsed.delete(cls); else _collapsed.add(cls);
-  renderGrid();
+// ── goToToday / shiftWeek ────────────────────────────────────────
+function goToToday(){
+  var ti=new Date().toISOString().slice(0,7);
+  if(ti!==YM){YM=ti;weekIdx=0;loadMonth();return;}
+  var weeks=monthWeeks(),td=new Date().getDate();weekIdx=0;
+  for(var i=0;i<weeks.length;i++){if(weeks[i].days.includes(td)){weekIdx=i;break;}}renderGrid();
 }
-
-// ── Go to today ──────────────────────────────────────────────────
-function goToToday() {
-  var todayISO=new Date().toISOString().slice(0,7);
-  if(todayISO!==YM){ YM=todayISO; weekIdx=0; loadMonth(); return; }
-  var weeks=monthWeeks(), td=new Date().getDate();
-  weekIdx=0;
-  for(var i=0;i<weeks.length;i++){ if(weeks[i].days.includes(td)){weekIdx=i;break;} }
-  renderGrid();
-}
-
-// ── Toolbar week nav ────────────────────────────────────────────
-function shiftWeek(dir) {
-  if(planMode==='week'){ var weeks=monthWeeks(); weekIdx=Math.max(0,Math.min(weeks.length-1,weekIdx+dir)); renderGrid(); }
+function shiftWeek(dir){
+  if(planMode==='week'){var weeks=monthWeeks();weekIdx=Math.max(0,Math.min(weeks.length-1,weekIdx+dir));renderGrid();}
   else shiftMonth(dir);
 }
 
-// ── Drag & drop ─────────────────────────────────────────────────
-var _boardDrag=null; // _clipboard already declared above
-function boardDragStart(e,id,d){ _boardDrag={id,d,code:getCode(id,d)}; e.dataTransfer.effectAllowed='copyMove'; e.target.classList.add('dragging'); }
-function boardDragEnd(){ document.querySelectorAll('.shift-card.dragging').forEach(function(el){el.classList.remove('dragging');}); _boardDrag=null; }
-function boardDragOver(e,cell){ if(!_boardDrag)return; e.preventDefault(); var copy=e.altKey||e.ctrlKey; cell.classList.toggle('drag-over',!copy); cell.classList.toggle('copy-over',copy); e.dataTransfer.dropEffect=copy?'copy':'move'; }
-function boardDragLeave(cell){ cell.classList.remove('drag-over','copy-over'); }
-function boardDrop(e,tgtId,tgtDay){
-  e.preventDefault();
-  e.currentTarget.classList.remove('drag-over','copy-over');
-  if(!_boardDrag)return;
-  var copy=e.altKey||e.ctrlKey, src=_boardDrag;
-  if(src.id===tgtId&&src.d===tgtDay)return;
-  pushUndo(snapshotSchedule());
-  commitCell(tgtId,tgtDay,src.code);
-  if(!copy) commitCell(src.id,src.d,'');
-  toast((copy?'📋 Copiato':'↕ Spostato')+': '+(src.code||'vuoto'));
-  renderGrid();
+// ── Drag & Drop ──────────────────────────────────────────────────
+var _bdSrc=null;
+function boardDragStart(e,id,d){_bdSrc={id,d,code:getCode(id,d)};e.dataTransfer.effectAllowed='copyMove';e.target.classList.add('dragging');}
+function boardDragEnd(){document.querySelectorAll('.shift-card.dragging').forEach(function(el){el.classList.remove('dragging');});_bdSrc=null;}
+function boardDragOver(e,cell){if(!_bdSrc)return;e.preventDefault();var copy=e.altKey||e.ctrlKey;cell.classList.toggle('drag-over',!copy);cell.classList.toggle('copy-over',copy);}
+function boardDragLeave(cell){cell.classList.remove('drag-over','copy-over');}
+function boardDrop(e,tId,tDay){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over','copy-over');
+  if(!_bdSrc)return;var copy=e.altKey||e.ctrlKey,src=_bdSrc;
+  if(src.id===tId&&src.d===tDay)return;
+  if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));
+  commitCell(tId,tDay,src.code);if(!copy)commitCell(src.id,src.d,'');
+  toast((copy?'📋 Copiato':'↕ Spostato')+': '+(src.code||'vuoto'));renderGrid();
 }
 
 // ── Context menu ─────────────────────────────────────────────────
-_ctxCtx = _ctxCtx || null;
-function showCtxMenu(e,id,d){
-  e.preventDefault(); _ctxCtx={id,d};
+var _bdCtx=null,_bdClipboard=null;
+function boardCtxOpen(e,id,d){
+  e.preventDefault();_bdCtx={id,d};
   var m=document.getElementById('ctxMenu');
-  var p=document.getElementById('ctx-paste'); if(p) p.style.display=_clipboard!==null?'flex':'none';
+  var p=document.getElementById('ctx-paste');if(p)p.style.display=_bdClipboard?'flex':'none';
   m.style.left=Math.min(e.clientX,window.innerWidth-170)+'px';
-  m.style.top =Math.min(e.clientY,window.innerHeight-160)+'px';
-  m.classList.add('open');
+  m.style.top=Math.min(e.clientY,window.innerHeight-160)+'px';
+  m.style.display='block';
 }
-document.addEventListener('click',function(){ var m=document.getElementById('ctxMenu'); if(m)m.classList.remove('open'); });
-function ctxAction(action){
-  if(!_ctxCtx)return;
-  var id=_ctxCtx.id, d=_ctxCtx.d, code=getCode(id,d);
-  if(action==='edit') openPanel(id,d);
-  else if(action==='copy'){ _clipboard=code; showKbdHint('📋 Copiato: '+(code||'vuoto')); }
-  else if(action==='paste'&&_clipboard!==null){ pushUndo(snapshotSchedule()); commitCell(id,d,_clipboard); renderGrid(); }
+document.addEventListener('click',function(){document.getElementById('ctxMenu').style.display='none';});
+function boardCtxAction(action){
+  if(!_bdCtx)return;var id=_bdCtx.id,d=_bdCtx.d,code=getCode(id,d);
+  if(action==='edit')spOpenPanel(id,d);
+  else if(action==='copy'){_bdClipboard=code;showKbdHint('📋 Copiato: '+(code||'vuoto'));}
+  else if(action==='paste'&&_bdClipboard!==null){if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));commitCell(id,d,_bdClipboard);renderGrid();}
   else if(action==='duplicate'&&code){
-    var dow_=dow(YM,d), days=daysInMonth(YM); pushUndo(snapshotSchedule()); var n=0;
-    for(var dd=1;dd<=days;dd++){ if(dow(YM,dd)===dow_){commitCell(id,dd,code);n++;} }
-    toast('Duplicato su '+n+' giorni'); renderGrid();
+    var dow_=dow(YM,d),days=daysInMonth(YM);if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));var n=0;
+    for(var dd=1;dd<=days;dd++){if(dow(YM,dd)===dow_){commitCell(id,dd,code);n++;}}toast('Duplicato su '+n+' giorni');renderGrid();
   }
-  else if(action==='delete'){ pushUndo(snapshotSchedule()); commitCell(id,d,''); renderGrid(); }
+  else if(action==='delete'){if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));commitCell(id,d,'');renderGrid();}
 }
 
-// ── Slide panel (double-click) ────────────────────────────────────
-document.addEventListener('click',function(e){
-  var td=e.target.closest('td.cell')||e.target.closest('.shift-cell');
-  if(!td||e.detail!==2)return;
-  var m=(td.id||'').match(/^c_(\d+)_(\d+)$/);
-  if(m){e.preventDefault(); openPanel(+m[1],+m[2]);}
-},true);
-
-// openPanel: works with the existing sp* functions from the UX upgrade
-function openPanel(driverId,day){
-  var _spCtx={driverId,day};
-  window._spCtx=_spCtx;
-  var dr=state.drivers.find(function(x){return x.id===driverId;});
-  if(!dr)return;
+// ── Slide panel (shift editor) ────────────────────────────────────
+var _spCtxSPA=null;
+function spOpenPanel(driverId,day){
+  _spCtxSPA={driverId,day};
+  var dr=state.drivers.find(function(x){return x.id===driverId;});if(!dr)return;
   var curCode=getCode(driverId,day);
   document.getElementById('spTitle').textContent=dr.cognome+' '+dr.nome;
   document.getElementById('spSub').textContent=dowName(YM,day)+' '+fmtDM(YM,day)+' — '+YM;
-  // Service grid
-  var grid=document.getElementById('spServiceGrid'); grid.innerHTML='';
+  var grid=document.getElementById('spServiceGrid');grid.innerHTML='';
   groupedCodes().forEach(function(g){
     g.codes.forEach(function(c){
-      var btn=document.createElement('button');
-      btn.className='sp-service-btn'+(c===curCode?' active':'');
-      btn.style.background='var(--'+g.cls+'-bg)'; btn.style.color='var(--'+g.cls+')';
-      btn.textContent=c; btn.title=codeLabel(c);
-      btn.onclick=function(){ document.querySelectorAll('.sp-service-btn').forEach(function(b){b.classList.toggle('active',b.textContent===c);}); document.getElementById('spCodeInput').value=c; };
+      var btn=document.createElement('button');btn.className='sp-service-btn'+(c===curCode?' active':'');
+      btn.style.background='var(--'+g.cls+'-bg)';btn.style.color='var(--'+g.cls+')';
+      btn.textContent=c;btn.title=codeLabel(c);
+      btn.onclick=function(){
+        document.querySelectorAll('.sp-service-btn').forEach(function(b){b.classList.toggle('active',b.textContent===c);});
+        document.getElementById('spCodeInput').value=c;
+      };
       grid.appendChild(btn);
     });
   });
   document.getElementById('spCodeInput').value=curCode||'';
   document.getElementById('spNote').value='';
-  // Driver info
   var ctr=contracts().find(function(c){return c.code===dr.contratto;});
   document.getElementById('spDriverInfo').innerHTML='<b>'+esc(dr.filiale)+'</b> · '+esc(dr.service)+' · '+esc(dr.contratto||'—')+(ctr?' ('+ctr.ore+'h)':'');
-  // Driver selector
   var dSel=document.getElementById('spDriver');
   dSel.innerHTML=scopedActive().map(function(d){return '<option value="'+d.id+'"'+(d.id===driverId?' selected':'')+'>'+esc(d.cognome)+' '+esc(d.nome)+'</option>';}).join('');
-  document.getElementById('spDay').value=day;
-  document.getElementById('spDay').max=daysInMonth(YM);
-  // Conflict detection
+  document.getElementById('spDay').value=day;document.getElementById('spDay').max=daysInMonth(YM);
   var conflicts=[];
-  if(curCode&&curCode.toUpperCase()!=='OFF'){var cf=consecutiveFlag(dr); if(Object.keys(cf).length>0)conflicts.push('⚠️ 7+ giorni consecutivi senza riposo');}
-  if(dr.ctrType==='determinato'&&dr.expiry){var exp=new Date(dr.expiry+'T00:00:00'),tgt=new Date(YM+'-'+String(day).padStart(2,'0')+'T00:00:00');if(tgt>exp)conflicts.push('⚠️ Contratto scaduto il '+fmtDate(dr.expiry));}
-  document.getElementById('spConflicts').innerHTML=conflicts.map(function(c){return '<div class="sp-conflict"><span>⚠️</span><span>'+esc(c.replace(/^⚠️\s*/,''))+'</span></div>';}).join('');
+  if(curCode&&curCode.toUpperCase()!=='OFF'){var cf=consecutiveFlag(dr);if(Object.keys(cf).length>0)conflicts.push('7+ giorni consecutivi senza riposo');}
+  if(dr.ctrType==='determinato'&&dr.expiry){var exp=new Date(dr.expiry+'T00:00:00'),tgt=new Date(YM+'-'+String(day).padStart(2,'0')+'T00:00:00');if(tgt>exp)conflicts.push('Contratto scaduto il '+fmtDate(dr.expiry));}
+  document.getElementById('spConflicts').innerHTML=conflicts.map(function(c){return '<div class="sp-conflict"><span>⚠️</span><span>'+esc(c)+'</span></div>';}).join('');
   document.getElementById('slidePanel').classList.add('open');
   document.getElementById('spBackdrop').style.display='block';
   setTimeout(function(){document.getElementById('spCodeInput').focus();},230);
@@ -1745,41 +1689,647 @@ function openPanel(driverId,day){
 function closePanel(){
   document.getElementById('slidePanel').classList.remove('open');
   document.getElementById('spBackdrop').style.display='none';
-  window._spCtx=null;
+  _spCtxSPA=null;
 }
-function spSave(){
-  var ctx=window._spCtx; if(!ctx)return;
+function boardSpSave(){
+  var ctx=_spCtxSPA;if(!ctx)return;
   var code=document.getElementById('spCodeInput').value.trim();
   var resolved=code?resolveCode(code):'';
   if(code&&resolved===null){toast('Codice non valido: '+code);return;}
-  pushUndo(snapshotSchedule());
+  if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));
   commitCell(ctx.driverId,ctx.day,resolved||'');
-  closePanel(); renderGrid(); setSaveState('saving'); setTimeout(function(){setSaveState('saved');},800);
+  closePanel();renderGrid();setSaveState('saving');setTimeout(function(){setSaveState('saved');},800);
 }
-function spDuplicate(){
-  var ctx=window._spCtx; if(!ctx)return;
+function boardSpDuplicate(){
+  var ctx=_spCtxSPA;if(!ctx)return;
   var code=resolveCode(document.getElementById('spCodeInput').value.trim());
   if(!code){toast('Seleziona un codice prima di duplicare');return;}
-  var dow_=dow(YM,ctx.day), days=daysInMonth(YM);
-  pushUndo(snapshotSchedule()); var n=0;
-  for(var d=1;d<=days;d++){if(dow(YM,d)===dow_){commitCell(ctx.driverId,d,code);n++;}}
-  dirty(); renderGrid(); closePanel(); toast('Duplicato su '+n+' giorni');
+  var dow_=dow(YM,ctx.day),days=daysInMonth(YM);
+  if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));
+  var n=0;for(var d=1;d<=days;d++){if(dow(YM,d)===dow_){commitCell(ctx.driverId,d,code);n++;}}
+  dirty();renderGrid();closePanel();toast('Duplicato su '+n+' giorni');
 }
-function spDelete(){
-  var ctx=window._spCtx; if(!ctx)return;
-  pushUndo(snapshotSchedule());
+function boardSpDelete(){
+  var ctx=_spCtxSPA;if(!ctx)return;
+  if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));
   commitCell(ctx.driverId,ctx.day,'');
-  dirty(); renderGrid(); closePanel(); setSaveState('saved');
+  dirty();renderGrid();closePanel();setSaveState('saved');
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────
 document.addEventListener('keydown',function(e){
   var inInput=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement&&document.activeElement.tagName);
-  if(e.key==='Escape'){ if(document.getElementById('slidePanel').classList.contains('open'))closePanel(); var m=document.getElementById('ctxMenu'); if(m)m.classList.remove('open'); }
-  if(e.ctrlKey&&!e.shiftKey&&e.key==='z'){e.preventDefault();doUndo();}
-  if(e.ctrlKey&&e.shiftKey&&(e.key==='z'||e.key==='Z')){e.preventDefault();doRedo();}
-  if(e.ctrlKey&&e.key==='f'){var q=document.getElementById('q');if(q){e.preventDefault();q.focus();q.select();showKbdHint('🔍 Cerca DAS');}}
+  if(e.key==='Escape'){
+    closePanel();
+    document.getElementById('ctxMenu').style.display='none';
+    document.querySelectorAll('.overlay.on').forEach(function(o){o.classList.remove('on');});
+  }
+  if(e.ctrlKey&&!e.shiftKey&&e.key==='z'){e.preventDefault();if(typeof doUndo==='function')doUndo();}
+  if(e.ctrlKey&&e.shiftKey&&(e.key==='z'||e.key==='Z')){e.preventDefault();if(typeof doRedo==='function')doRedo();}
+  if(e.ctrlKey&&e.key==='f'){var q=document.getElementById('q');if(q){e.preventDefault();navigate('scheduler');q.focus();q.select();showKbdHint('🔍 Cerca DAS');}}
   if(e.ctrlKey&&e.key==='s'&&!inInput){e.preventDefault();saveAll(false);setSaveState('saved');showKbdHint('💾 Salvato');}
+});
+
+// ── Dashboard JS (adapted) ────────────────────────────────────────
+
+
+/* ─────────────────────────────────────────────────────────────────
+   TurniDSP Dashboard — unified with platform.css
+   ───────────────────────────────────────────────────────────────── */
+
+// ── Auth guard ────────────────────────────────────────────────────
+if (!(TurniApi.isLoggedIn && TurniApi.isLoggedIn() && TurniApi.user())) {
+  location.replace('login.html');
+}
+TurniApi.startIdleTimeout && TurniApi.startIdleTimeout(30, () => {
+  toast('Sessione scaduta', 'warn'); location.replace('login.html');
+});
+const USER = TurniApi.user();
+
+// ── Helpers ───────────────────────────────────────────────────────
+const $d = id => document.getElementById(id);
+// esc() reused from scheduler core
+const fmt = d => d ? new Date(d).toLocaleDateString('it-IT') : '—';
+const fmtTs = d => d ? new Date(d).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) : '—';
+const today = () => new Date().toISOString().slice(0,10);
+
+// toast() and _toastTimer are defined in scheduler core
+
+function animateCount(el, target) {
+  const dur=600, t0=performance.now();
+  const step=t=>{ const p=Math.min((t-t0)/dur,1); el.textContent=Math.round(target*p); if(p<1)requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+// ── Navigation ────────────────────────────────────────────────────
+const SECTIONS = ['overview','charts','activity','modules','users'];
+function showSection(id) {
+  SECTIONS.forEach(s => $('sec-'+s)?.classList.toggle('hide', s!==id));
+  document.querySelectorAll('.nav-link').forEach(n => n.classList.toggle('active', false));
+  // mark active nav-link by content match
+  document.querySelectorAll('.nav-link, .nav-link a').forEach(n => {
+    const txt = n.textContent.toLowerCase();
+    const match = (id==='overview'&&txt.includes('overview')) ||
+                  (id==='charts'&&txt.includes('analytics')) ||
+                  (id==='activity'&&txt.includes('attività')) ||
+                  (id==='modules'&&txt.includes('moduli')) ||
+                  (id==='users'&&txt.includes('utenti'));
+    if(match) n.classList.add('active');
+  });
+  if(id==='charts')   renderCharts();
+  if(id==='activity') renderActivity();
+  if(id==='users')    loadUsers();
+}
+
+// ── Init sidebar user info ────────────────────────────────────────
+function initSidebarUser() {
+  const name = USER.full_name || USER.username || '—';
+  const initials = name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+  $d('navAvatar').textContent = initials;
+  $d('navUname').textContent  = name;
+  $d('navRole').textContent   = { admin:'Amministratore', osm:'OSM', hr_manager:'HR Manager', team_leader:'Team Leader' }[USER.role] || USER.role;
+  if(USER.role==='admin') document.body.classList.add('is-admin');
+}
+
+function doLogout() { TurniApi.logout().catch(()=>{}); location.replace('login.html'); }
+
+// ── Greeting ──────────────────────────────────────────────────────
+function setGreeting() {
+  const h = new Date().getHours();
+  const g = h<12?'Buongiorno':h<18?'Buon pomeriggio':'Buonasera';
+  $d('pageTitle').textContent = g + ', ' + (USER.full_name||USER.username);
+  $d('pageSub').textContent = new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+// ── Data loading ──────────────────────────────────────────────────
+let _kpiData=null, _branches=[], _charts={};
+
+async function initBranches() {
+  try {
+    _branches = await TurniApi.branches();
+    const sel = $d('branchSel');
+    sel.innerHTML = '<option value="">Tutte le filiali</option>' +
+      _branches.map(b=>`<option value="${esc(b.code)}">${esc(b.code)}</option>`).join('');
+    sel.addEventListener('change', refreshAll);
+
+    const nuBranches = $d('nuBranches');
+    if(nuBranches) nuBranches.innerHTML = _branches.map(b=>`<option value="${b.id}">${esc(b.code)} — ${esc(b.name)}</option>`).join('');
+  } catch(e) { console.error('branches:', e.message); }
+}
+
+async function refreshAll() {
+  const date   = $d('kpiDate').value || today();
+  const branch = $d('branchSel').value || undefined;
+  $d('dspDateLabel').textContent = fmt(date);
+  $d('fcBadge').textContent = fmt(date);
+
+  try {
+    _kpiData = await TurniApi.kpi({ date, ...(branch?{branch}:{}) });
+    renderKPIs(_kpiData);
+    renderForecastCard(_kpiData);
+    renderExpiryCard(_kpiData);
+    renderAttendanceCard(_kpiData);
+    renderDSP(_kpiData);
+  } catch(e) { toast('Errore KPI: '+e.message,'bad'); console.error(e); }
+
+  loadAlerts();
+  if(document.getElementById('sec-charts') && !document.getElementById('sec-charts').classList.contains('hide')) renderCharts();
+  if(document.getElementById('sec-activity') && !document.getElementById('sec-activity').classList.contains('hide')) renderActivity();
+}
+
+// ── KPI Cards ─────────────────────────────────────────────────────
+function renderKPIs(d) {
+  const dr  = d.drivers   || {};
+  const fc  = d.forecast  || {};
+  const att = d.attendance || {};
+  const ex  = d.contracts  || {};
+
+  const pct = dr.total ? Math.round(dr.present/dr.total*100) : 0;
+  const fcOk = fc.delta >= 0;
+  const exBad = (ex.in_7||0)+(ex.expired||0);
+
+  const cards = [
+    { cls:'pri',  icon:'👷', label:'Driver totali',
+      value: dr.total||0,
+      subs: [{l:'Presenti',v:dr.present||0},{l:'Assenti',v:dr.absent||0},{l:'In riposo',v:dr.on_leave||0}],
+      bar: pct, barColor:'var(--brand)', delta: pct+'% presenti' },
+    { cls: fcOk?'ok':'bad', icon:'🎯', label:'Forecast vs Pianificato',
+      value: fc.planned||0,
+      subs: [{l:'Forecast',v:fc.forecast||0},{l:'Delta',v:(fc.delta>0?'+':'')+(fc.delta||0)}],
+      delta: (fc.delta_pct>0?'▲':'▼')+' '+Math.abs(fc.delta_pct||0)+'%',
+      deltaOk: fcOk },
+    { cls: exBad>0?'warn':'ok', icon:'📋', label:'Contratti in scadenza',
+      value: ex.in_30||0,
+      subs: [{l:'Scaduti',v:ex.expired||0},{l:'7 gg',v:ex.in_7||0},{l:'15 gg',v:ex.in_15||0}],
+      delta: '30 giorni' },
+    { cls:'teal', icon:'🏥', label:'Assenze oggi',
+      value: (att.absent||0)+(att.medical||0)+(att.vacation||0),
+      subs: [{l:'Malattia',v:att.medical||0},{l:'Ferie',v:att.vacation||0},{l:'Assenti',v:att.absent||0}],
+      delta: (att.training||0)>0 ? att.training+' in formazione' : '' },
+  ];
+
+  $d('kpiGrid').innerHTML = cards.map((c,i)=>`
+    <div class="kpi-card ${c.cls} fade-in fade-in-${i}">
+      <div class="kpi-icon">${c.icon}</div>
+      <div class="kpi-val" data-target="${c.value}">${c.value}</div>
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-subs">
+        ${c.subs.map(s=>`<div class="kpi-sub"><span class="sl">${s.l}</span><span class="sv">${s.v}</span></div>`).join('')}
+      </div>
+      ${c.bar!==undefined?`<div class="kpi-bar"><div class="kpi-fill" style="width:${c.bar}%;background:${c.barColor}"></div></div>`:''}
+      ${c.delta?`<div class="text-xs text-muted mt-2">${c.delta}</div>`:''}
+    </div>`).join('');
+
+  $d('kpiGrid').querySelectorAll('.kpi-val').forEach(el => {
+    const t = +el.dataset.target; if(t) animateCount(el, t);
+  });
+}
+
+function renderForecastCard(d) {
+  const fc = d.forecast||{};
+  const ok = fc.delta>=0;
+  const pct = fc.forecast ? Math.min(100, Math.round(fc.planned/fc.forecast*100)) : 0;
+  $d('fcContent').innerHTML = `
+    <div class="flex gap-4" style="margin-bottom:10px">
+      <div><div class="text-xs text-muted">Forecast</div><div style="font-size:1.6rem;font-weight:800">${fc.forecast||0}</div></div>
+      <div><div class="text-xs text-muted">Pianificati</div><div style="font-size:1.6rem;font-weight:800">${fc.planned||0}</div></div>
+      <div><div class="text-xs text-muted">Delta</div><div style="font-size:1.6rem;font-weight:800;color:${ok?'var(--ok)':'var(--bad)'}">${fc.delta>0?'+':''}${fc.delta||0}</div></div>
+    </div>
+    <div class="prog-wrap" style="height:7px"><div class="prog-bar" style="width:${pct}%;background:${ok?'var(--ok)':'var(--bad)'}"></div></div>
+    <div class="text-xs text-muted mt-2">${pct}% rispetto al forecast</div>`;
+}
+
+function renderExpiryCard(d) {
+  const ex = d.contracts||{};
+  $d('expiryContent').innerHTML = [
+    [ex.expired||0,'Scaduti','bad'],
+    [ex.in_7||0,'Entro 7 giorni','bad'],
+    [ex.in_15||0,'Entro 15 giorni','warn'],
+    [ex.in_30||0,'Entro 30 giorni','muted'],
+  ].map(([n,l,c])=>`<div class="dash-expiry-row">
+    <div class="dash-expiry-num" style="color:var(--${c==='bad'?'bad':c==='warn'?'warn':'muted'})">${n}</div>
+    <div><div class="font-semi text-sm">${l}</div></div>
+  </div>`).join('');
+}
+
+function renderAttendanceCard(d) {
+  const a = d.attendance||{};
+  const tot = (a.present||0)+(a.absent||0)+(a.medical||0)+(a.vacation||0)+(a.training||0)||1;
+  const pct = n => Math.round(n/tot*100);
+  const row = (label,val,color) => `
+    <div class="dash-presence-row">
+      <div class="dash-pl">${label}</div>
+      <div class="prog-wrap flex-1" style="height:7px"><div class="prog-bar" style="width:${pct(val)}%;background:${color}"></div></div>
+      <div class="text-sm font-semi" style="width:28px;text-align:right">${val}</div>
+    </div>`;
+  $d('attContent').innerHTML = [
+    row('Presenti',    a.present||0,  'var(--ok)'),
+    row('Assenti',     a.absent||0,   'var(--bad)'),
+    row('Malattia',    a.medical||0,  'var(--warn)'),
+    row('Ferie',       a.vacation||0, 'var(--brand)'),
+    row('Formazione',  a.training||0, 'var(--teal)'),
+  ].join('');
+}
+
+function renderDSP(kpiData) {
+  const tbody = $d('dspTbl').querySelector('tbody');
+  const dsp = kpiData?.dsp;
+  if(!dsp||!dsp.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-muted" style="padding:16px;text-align:center">Nessun dato — aggiungi DAS nello Scheduler</td></tr>';
+    return;
+  }
+  let totD=0,totP=0;
+  tbody.innerHTML = dsp.map(r=>{
+    totD+=(r.drivers||0); totP+=(r.present||0);
+    const cov = r.drivers>0 ? Math.round(r.present/r.drivers*100) : 0;
+    return `<tr>
+      <td><b>${esc(r.branch_code||'—')}</b></td>
+      <td>${r.drivers||0}</td>
+      <td class="text-ok font-semi">${r.present||0}</td>
+      <td>
+        <div class="flex items-center gap-2">
+          <div class="prog-wrap" style="height:6px;width:70px">
+            <div class="prog-bar" style="width:${cov}%;background:${cov>=80?'var(--ok)':cov>=50?'var(--warn)':'var(--bad)'}"></div>
+          </div>
+          <span class="text-xs">${cov}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') + `<tr style="border-top:2px solid var(--line)">
+    <td><b>Totale</b></td><td><b>${totD}</b></td>
+    <td class="text-ok font-semi"><b>${totP}</b></td>
+    <td><b>${totD>0?Math.round(totP/totD*100):0}%</b></td>
+  </tr>`;
+}
+
+async function loadAlerts() {
+  try {
+    const rows = await TurniApi.expiryAlerts(60);
+    const tbody = $d('alertsTbl').querySelector('tbody');
+    if(!rows.length) { tbody.innerHTML='<tr><td colspan="5" class="text-muted" style="padding:12px;text-align:center">Nessuna scadenza nei prossimi 60 giorni</td></tr>'; return; }
+    tbody.innerHTML = rows.slice(0,25).map(r=>`<tr>
+      <td><b>${esc(r.full_name||'—')}</b></td>
+      <td>${esc(r.alert_type||'—')}</td>
+      <td>${fmt(r.expiry_date)}</td>
+      <td>${r.days_left<0?'Scaduto':r.days_left+' gg'}</td>
+      <td><span class="badge ${r.level==='overdue'||r.level==='critical'?'b-bad':r.level==='warning'?'b-warn':'b-pri'}">${esc(r.level)}</span></td>
+    </tr>`).join('');
+  } catch(e) { $d('alertsTbl').querySelector('tbody').innerHTML=`<tr><td colspan="5" class="text-muted">${esc(e.message)}</td></tr>`; }
+}
+
+// ── Activity feed ─────────────────────────────────────────────────
+async function renderActivity() {
+  const icons = {create:'➕',update:'✏️',delete:'🗑',login:'🔐',logout:'🚪'};
+  const colors = {create:'var(--ok-bg)',update:'var(--brand-lt)',delete:'var(--bad-bg)',login:'var(--teal-bg)'};
+  try {
+    const data = _kpiData?.activity || await TurniApi.audit({limit:20});
+    $d('activityList').innerHTML = (data||[]).map(r=>{
+      const a = r.action||'';
+      return `<div class="feed-item">
+        <div class="feed-icon" style="background:${colors[a]||'var(--bg2)'}">${icons[a]||'⚡'}</div>
+        <div><div class="feed-text">${esc(r.detail||(r.entity+' · '+r.action))}</div>
+        <div class="feed-meta">${esc(r.username||'—')} · ${fmtTs(r.ts)}</div></div>
+      </div>`;
+    }).join('') || '<div class="text-muted text-sm">Nessuna attività</div>';
+  } catch(e) { $d('activityList').innerHTML=`<div class="text-muted text-sm">${esc(e.message)}</div>`; }
+}
+
+// ── Charts ────────────────────────────────────────────────────────
+function destroyChart(id) { if(_charts[id]){_charts[id].destroy();delete _charts[id];} }
+
+function chartOpts() {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}, tooltip:{mode:'index',intersect:false}},
+    scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}}}
+  };
+}
+
+async function renderCharts() {
+  const d = _kpiData || await TurniApi.kpi({date:$d('kpiDate').value||today()}).catch(()=>null);
+  if(!d) return;
+
+  destroyChart('chartAtt');
+  if(d.attendance_trend?.length) {
+    _charts.chartAtt = new Chart($d('chartAtt'), {
+      type:'bar',
+      data:{
+        labels: d.attendance_trend.map(r=>r.d.slice(5)),
+        datasets:[
+          {label:'Presenti', data:d.attendance_trend.map(r=>r.present), backgroundColor:'rgba(5,150,105,.75)', borderRadius:4},
+          {label:'Assenti',  data:d.attendance_trend.map(r=>r.absent),  backgroundColor:'rgba(220,38,38,.55)', borderRadius:4},
+        ]
+      },
+      options:{...chartOpts(), plugins:{...chartOpts().plugins, legend:{display:true,position:'top',labels:{font:{size:12}}}}}
+    });
+  }
+
+  destroyChart('chartFc');
+  if(d.forecast_trend?.length) {
+    _charts.chartFc = new Chart($d('chartFc'), {
+      type:'line',
+      data:{
+        labels: d.forecast_trend.map(r=>r.d.slice(5)),
+        datasets:[
+          {label:'Forecast',   data:d.forecast_trend.map(r=>r.forecast), borderColor:'var(--brand)',backgroundColor:'rgba(79,70,229,.1)',tension:.4,fill:true,pointRadius:3},
+          {label:'Pianificati',data:d.forecast_trend.map(r=>r.planned),  borderColor:'var(--ok)',   backgroundColor:'rgba(5,150,105,.05)', tension:.4,fill:false,pointRadius:3},
+        ]
+      },
+      options:{...chartOpts(), plugins:{...chartOpts().plugins, legend:{display:true,position:'top',labels:{font:{size:12}}}}}
+    });
+  }
+
+  destroyChart('chartAbs');
+  if(d.absence_types?.length) {
+    const palette=['var(--brand)','var(--ok)','var(--warn)','var(--bad)','var(--purple)','var(--teal)','#F59E0B','#6B7280'];
+    _charts.chartAbs = new Chart($d('chartAbs'), {
+      type:'doughnut',
+      data:{labels:d.absence_types.map(r=>r.absence_type), datasets:[{data:d.absence_types.map(r=>r.cnt), backgroundColor:palette, borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12},padding:10}}}}
+    });
+  }
+
+  destroyChart('chartGrow');
+  if(d.employee_growth?.length) {
+    _charts.chartGrow = new Chart($d('chartGrow'), {
+      type:'bar',
+      data:{labels:d.employee_growth.map(r=>r.month), datasets:[{label:'Nuovi',data:d.employee_growth.map(r=>r.added),backgroundColor:'rgba(79,70,229,.75)',borderRadius:6}]},
+      options:chartOpts()
+    });
+  }
+}
+
+// ── Notifications ─────────────────────────────────────────────────
+let _notifOpen=false;
+async function loadNotifications() {
+  try {
+    const data = await TurniApi.notifications({limit:30});
+    const badge=$d('notifBadge');
+    if(data.unread_count>0){ badge.style.display='inline-block'; badge.textContent=data.unread_count>99?'99+':data.unread_count; }
+    else badge.style.display='none';
+    const sevColors={critical:'var(--bad)',warning:'var(--warn)',info:'var(--brand)'};
+    $d('notifList').innerHTML = data.rows.length
+      ? data.rows.map(n=>`<div class="ph-notif-item${n.read_at?'':' unread'}" onclick="clickNotif(${n.id},'${esc(n.action_url||'')}')">
+          <div class="ph-notif-title">
+            <span class="ph-notif-sev-dot" style="background:${sevColors[n.severity]||'var(--brand)'}"></span>
+            ${esc(n.title||'')}
+          </div>
+          ${n.body?`<div class="ph-notif-body">${esc(n.body)}</div>`:''}
+          <div class="ph-notif-ts">${fmtTs(n.created_at)}</div>
+        </div>`).join('')
+      : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--muted)">Nessuna notifica</div>';
+  } catch {}
+}
+// clickNotif() defined in SPA layer below
+// markAllRead() defined in SPA layer below
+function toggleNotif() {
+  _notifOpen=!_notifOpen;
+  $d('notifPanel').style.display=_notifOpen?'block':'none';
+  if(_notifOpen) loadNotifications();
+}
+document.addEventListener('click',e=>{
+  if(_notifOpen&&!e.target.closest('#notifPanel')&&!e.target.closest('.ph-notif-btn')){_notifOpen=false;$d('notifPanel').style.display='none';}
+  if($d('searchDd').style.display!=='none'&&!e.target.closest('.ph-search')) $d('searchDd').style.display='none';
+});
+
+// ── Global search ─────────────────────────────────────────────────
+let _srTimer=null;
+function debouncedSearch(q) {
+  clearTimeout(_srTimer);
+  if(!q||q.length<2){$d('searchDd').style.display='none';return;}
+  _srTimer=setTimeout(()=>doSearch(q),280);
+}
+async function doSearch(q) {
+  const dd=$d('searchDd'); dd.style.display='block';
+  dd.innerHTML='<div class="sd-item text-muted" style="pointer-events:none">Ricerca…</div>';
+  try {
+    const r=await TurniApi.search(q,12);
+    const icons={employee:'👤',document:'📄',absence:'🏥'};
+    dd.innerHTML=r.results.length
+      ? r.results.map(x=>`<a href="${esc(x.url||'#')}" class="sd-item">
+          <span class="sd-icon">${icons[x.type]||'📌'}</span>
+          <div class="flex-1"><div class="sd-title">${esc(x.title)}</div><div class="sd-sub">${esc(x.subtitle||'')}</div></div>
+          <span class="sd-type">${x.type}</span>
+        </a>`).join('')
+      : '<div class="sd-item text-muted" style="pointer-events:none">Nessun risultato</div>';
+  } catch { dd.innerHTML='<div class="sd-item text-muted" style="pointer-events:none">Errore ricerca</div>'; }
+}
+
+// ── Users management ──────────────────────────────────────────────
+// loadUsers() defined in SPA layer below
+// createUser() defined in SPA layer below
+// toggleUser() defined in SPA layer below
+// resetPw() defined in SPA layer below
+
+// ── Excel/PDF links ───────────────────────────────────────────────
+function wireTools() {
+  const ym=new Date().toISOString().slice(0,7);
+  const addDays=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+  $d('tplEmp').href   = TurniApi.xlsxTemplateUrl('employees');
+  $d('tplFc').href    = TurniApi.xlsxTemplateUrl('forecast');
+  $d('tplSch').href   = TurniApi.xlsxTemplateUrl('schedule');
+  $d('expEmp').href   = TurniApi.xlsxExportUrl('employees');
+  $d('expFc').href    = TurniApi.xlsxExportUrl('forecast',{month:ym});
+  $d('expSch').href   = TurniApi.xlsxExportUrl('schedule',{month:ym});
+  $d('pdfWeek').href  = TurniApi.pdfUrl('schedule/weekly',{from:addDays(today(),-6)});
+  $d('pdfMonth').href = TurniApi.pdfUrl('schedule/monthly',{month:ym});
+  $d('pdfAbs').href   = TurniApi.pdfUrl('absences',{month:ym});
+}
+
+// ── Boot ──────────────────────────────────────────────────────────
+async function bootDashboard() {
+  initSidebarUser();
+  setGreeting();
+  $d('kpiDate').value = today();
+  $d('kpiDate').addEventListener('change', refreshAll);
+  await initBranches();
+  wireTools();
+  refreshAll();
+  loadNotifications();
+  TurniApi.refreshNotifications && TurniApi.refreshNotifications().catch(()=>{});
+  setInterval(loadNotifications, 5*60*1000);
+  $d('navSync').textContent = '🟢 PostgreSQL';
+}
+// bootDashboard() called by SPA router
+
+
+// ── Report charts (separate canvases in reports section) ──────────
+var _rptCharts = {};
+async function renderReportCharts() {
+  var d;
+  try { d = await TurniApi.kpi({ date: new Date().toISOString().slice(0,10) }); } catch(e) { return; }
+  function destroy(id){ if(_rptCharts[id]){_rptCharts[id].destroy();delete _rptCharts[id];} }
+  var opts = { responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,font:{size:11}}},
+            y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}}}
+  };
+  if(d.attendance_trend && d.attendance_trend.length){
+    destroy('rptChartAtt');
+    _rptCharts.rptChartAtt = new Chart(document.getElementById('rptChartAtt'),{
+      type:'bar',
+      data:{labels:d.attendance_trend.map(r=>r.d.slice(5)),
+            datasets:[{label:'Presenti',data:d.attendance_trend.map(r=>r.present),backgroundColor:'rgba(5,150,105,.75)',borderRadius:4},
+                      {label:'Assenti', data:d.attendance_trend.map(r=>r.absent), backgroundColor:'rgba(220,38,38,.55)',borderRadius:4}]},
+      options:{...opts,plugins:{...opts.plugins,legend:{display:true,position:'top',labels:{font:{size:12}}}}}
+    });
+  }
+  if(d.forecast_trend && d.forecast_trend.length){
+    destroy('rptChartFc');
+    _rptCharts.rptChartFc = new Chart(document.getElementById('rptChartFc'),{
+      type:'line',
+      data:{labels:d.forecast_trend.map(r=>r.d.slice(5)),
+            datasets:[{label:'Forecast',data:d.forecast_trend.map(r=>r.forecast),borderColor:'var(--brand)',backgroundColor:'rgba(79,70,229,.1)',tension:.4,fill:true,pointRadius:3},
+                      {label:'Pianif.', data:d.forecast_trend.map(r=>r.planned), borderColor:'var(--ok)',  backgroundColor:'rgba(5,150,105,.05)',tension:.4,fill:false,pointRadius:3}]},
+      options:{...opts,plugins:{...opts.plugins,legend:{display:true,position:'top',labels:{font:{size:12}}}}}
+    });
+  }
+  if(d.absence_types && d.absence_types.length){
+    destroy('rptChartAbs');
+    _rptCharts.rptChartAbs = new Chart(document.getElementById('rptChartAbs'),{
+      type:'doughnut',
+      data:{labels:d.absence_types.map(r=>r.absence_type),
+            datasets:[{data:d.absence_types.map(r=>r.cnt),backgroundColor:['var(--brand)','var(--ok)','var(--warn)','var(--bad)','var(--purple)','var(--teal)','#F59E0B','#6B7280'],borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12},padding:10}}}}
+    });
+  }
+  if(d.employee_growth && d.employee_growth.length){
+    destroy('rptChartGrow');
+    _rptCharts.rptChartGrow = new Chart(document.getElementById('rptChartGrow'),{
+      type:'bar',
+      data:{labels:d.employee_growth.map(r=>r.month),
+            datasets:[{label:'Nuovi',data:d.employee_growth.map(r=>r.added),backgroundColor:'rgba(79,70,229,.75)',borderRadius:6}]},
+      options:opts
+    });
+  }
+  // Wire export links
+  var ym = new Date().toISOString().slice(0,7);
+  var rptExpEmp = document.getElementById('rptExpEmp'); if(rptExpEmp) rptExpEmp.href = TurniApi.xlsxExportUrl('employees');
+  var rptExpFc  = document.getElementById('rptExpFc');  if(rptExpFc)  rptExpFc.href  = TurniApi.xlsxExportUrl('forecast',{month:ym});
+  var rptExpSch = document.getElementById('rptExpSch'); if(rptExpSch) rptExpSch.href = TurniApi.xlsxExportUrl('schedule',{month:ym});
+  var addDays=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+  var rptPdfMonth = document.getElementById('rptPdfMonth'); if(rptPdfMonth) rptPdfMonth.href = TurniApi.pdfUrl('schedule/monthly',{month:ym});
+  var rptPdfAbs   = document.getElementById('rptPdfAbs');   if(rptPdfAbs)   rptPdfAbs.href   = TurniApi.pdfUrl('absences',{month:ym});
+}
+
+// ── Global search ─────────────────────────────────────────────────
+var _gSearchTimer = null;
+function debouncedGlobalSearch(q) {
+  clearTimeout(_gSearchTimer);
+  if(!q||q.length<2){document.getElementById('searchDropdown').style.display='none';return;}
+  _gSearchTimer = setTimeout(function(){doGlobalSearch(q);}, 280);
+}
+async function doGlobalSearch(q) {
+  var dd = document.getElementById('searchDropdown');
+  dd.style.display = 'block';
+  dd.innerHTML = '<div class="sd-item" style="pointer-events:none;color:var(--muted)">Ricerca…</div>';
+  try {
+    var r = await TurniApi.search(q, 12);
+    var icons = {employee:'👤',document:'📄',absence:'🏥'};
+    dd.innerHTML = r.results.length
+      ? r.results.map(function(x){
+          return '<a href="'+esc(x.url||'#')+'" class="sd-item">'+
+            '<span class="sd-icon">'+(icons[x.type]||'📌')+'</span>'+
+            '<div class="flex-1"><div class="sd-title">'+esc(x.title)+'</div><div class="sd-sub">'+esc(x.subtitle||'')+'</div></div>'+
+            '<span class="sd-type">'+x.type+'</span></a>';
+        }).join('')
+      : '<div class="sd-item" style="pointer-events:none;color:var(--muted)">Nessun risultato</div>';
+  } catch {
+    dd.innerHTML = '<div class="sd-item" style="pointer-events:none;color:var(--bad)">Errore ricerca</div>';
+  }
+}
+
+// ── Notifications ─────────────────────────────────────────────────
+_notifOpen = false;
+async function loadNotifPanel() {
+  try {
+    var data = await TurniApi.notifications({limit:30});
+    var badge = document.getElementById('notifBadge');
+    if(data.unread_count>0){badge.style.display='inline-block';badge.textContent=data.unread_count>99?'99+':data.unread_count;}
+    else badge.style.display='none';
+    var sevC={critical:'var(--bad)',warning:'var(--warn)',info:'var(--brand)'};
+    document.getElementById('notifList').innerHTML = data.rows.length
+      ? data.rows.map(function(n){
+          return '<div class="ph-notif-item'+(n.read_at?'':' unread')+'" onclick="clickNotif('+n.id+',\''+esc(n.action_url||'')+'\')">'+
+            '<div class="ph-notif-title"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+(sevC[n.severity]||'var(--brand)')+';margin-right:4px;vertical-align:middle"></span>'+esc(n.title||'')+'</div>'+
+            (n.body?'<div class="ph-notif-body">'+esc(n.body)+'</div>':'')+
+            '<div class="ph-notif-ts">'+fmtTs(n.created_at)+'</div></div>';
+        }).join('')
+      : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--muted)">Nessuna notifica</div>';
+  } catch {}
+}
+async function clickNotif(id,url){try{await TurniApi.markRead(id);}catch{} if(url)location.href=url;else toggleNotifPanel();loadNotifPanel();}
+async function markAllRead(){try{await TurniApi.markAllRead();loadNotifPanel();}catch{}}
+function toggleNotifPanel(){
+  _notifOpen=!_notifOpen;
+  document.getElementById('notifPanel').style.display=_notifOpen?'block':'none';
+  if(_notifOpen) loadNotifPanel();
+}
+document.addEventListener('click',function(e){
+  if(_notifOpen&&!e.target.closest('#notifPanel')&&!e.target.closest('.ph-notif-btn')){_notifOpen=false;document.getElementById('notifPanel').style.display='none';}
+  if(document.getElementById('searchDropdown').style.display!=='none'&&!e.target.closest('.ph-search')) document.getElementById('searchDropdown').style.display='none';
+});
+
+// ── User management ───────────────────────────────────────────────
+async function loadUsers(){
+  try{
+    var rows=await TurniApi.users();
+    var rl=function(r){return {admin:'Admin',osm:'OSM',hr_manager:'HR Manager',team_leader:'Team Leader'}[r]||r;};
+    var fmtTs2=function(d){return d?new Date(d).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}):'—';};
+    document.getElementById('usersTbl').innerHTML='<thead><tr><th>Username</th><th>Nome</th><th>Ruolo</th><th>Stato</th><th>Ultimo accesso</th><th></th></tr></thead><tbody>'+
+      rows.map(function(u){return '<tr><td><b>'+esc(u.username)+'</b></td><td>'+esc(u.full_name||'')+'</td>'+
+        '<td>'+rl(u.role)+'</td>'+
+        '<td><span class="badge '+(u.active?'b-ok':'b-warn')+'">'+(u.active?'attivo':'disattivo')+'</span></td>'+
+        '<td style="font-size:.78rem;color:var(--muted)">'+fmtTs2(u.last_login)+'</td>'+
+        '<td style="display:flex;gap:5px"><button class="btn ghost sm" onclick="toggleUser('+u.id+','+!u.active+')">'+(u.active?'Disattiva':'Attiva')+'</button>'+
+        '<button class="btn ghost sm" onclick="resetPw('+u.id+')">Reset pw</button></td></tr>';
+      }).join('')+'</tbody>';
+  } catch(e){document.getElementById('usersTbl').innerHTML='<tbody><tr><td class="text-muted">'+esc(e.message)+'</td></tr></tbody>';}
+}
+async function createUser(){
+  var $m=document.getElementById('nuMsg');$m.textContent='';
+  var branch_ids=Array.from(document.getElementById('nuBranches').selectedOptions).map(function(o){return +o.value;});
+  var payload={username:document.getElementById('nuUser').value.trim(),password:document.getElementById('nuPass').value,full_name:document.getElementById('nuName').value.trim(),role:document.getElementById('nuRole').value,branch_ids:branch_ids};
+  if(!payload.username||!payload.password){$m.style.color='var(--bad)';$m.textContent='Username e password obbligatori.';return;}
+  try{await TurniApi.createUser(payload);$m.style.color='var(--ok)';$m.textContent='Account creato.';document.getElementById('nuUser').value='';document.getElementById('nuPass').value='';document.getElementById('nuName').value='';loadUsers();}
+  catch(e){$m.style.color='var(--bad)';$m.textContent=e.message;}
+}
+async function toggleUser(id,active){try{await TurniApi.updateUser(id,{active});toast(active?'Utente attivato':'Disattivato');loadUsers();}catch(e){toast(e.message,'bad');}}
+async function resetPw(id){var pw=prompt('Nuova password:');if(!pw)return;try{await TurniApi.updateUser(id,{password:pw});toast('Password aggiornata');}catch(e){toast(e.message,'bad');}}
+
+// ── Init: boot dashboard on start, handle hash ────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  // Dashboard starts active by default (already set in HTML)
+  // Wire date/branch selectors
+  document.getElementById('kpiDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('kpiDate').addEventListener('change', refreshAll);
+  
+  // Wire tools after a tick (TurniApi is available)
+  setTimeout(function() {
+    try {
+      var ym = new Date().toISOString().slice(0,7);
+      var addDays = function(iso,n){var d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+      var tplEmp=document.getElementById('tplEmp');if(tplEmp) tplEmp.href=TurniApi.xlsxTemplateUrl('employees');
+    } catch(e) {}
+  }, 100);
+
+  // Check URL hash for deep linking
+  var hash = location.hash.replace('#','');
+  if(hash && ['dashboard','scheduler','employees','reports','settings'].includes(hash)) {
+    navigate(hash);
+  } else {
+    // Boot dashboard
+    _dashInited = true;
+    bootDashboard();
+  }
+  
+  // Refresh notifications periodically
+  loadNotifPanel();
+  TurniApi.refreshNotifications && TurniApi.refreshNotifications().catch(function(){});
+  setInterval(loadNotifPanel, 5*60*1000);
+  
+  // Set navSync
+  document.getElementById('navSync').textContent = '🟢 PostgreSQL';
 });
 
 </script>

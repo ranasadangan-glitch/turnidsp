@@ -80,7 +80,7 @@ button:disabled{opacity:.6;cursor:default}
 <script src="api.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-if (TurniApi.isLoggedIn() && TurniApi.user()) location.replace('index.html');
+if (TurniApi.isLoggedIn() && TurniApi.user()) location.replace('app.html');
 const saved = localStorage.getItem('turnidsp_api_base'); if (saved) $('apiBase').value = saved;
 
 $('f').addEventListener('submit', doLogin);
@@ -138,7 +138,7 @@ async function doLogin(ev){
   TurniApi.setApiBase($('apiBase').value.trim());
   try{
     await TurniApi.login($('u').value.trim(), $('p').value);
-    location.replace('index.html');
+    location.replace('app.html');
   }catch(e){
     // Always surface *something*, even for raw network errors (e.g. offline,
     // blocked request, unexpected redirect) so the button never just sits there.

@@ -6,10 +6,128 @@
 <title>TurniDSP — Piattaforma</title>
 <link rel="stylesheet" href="platform.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<<<<<<< HEAD
 </head>
 <body>
 
 <!-- ── Global UI chrome ── -->
+=======
+<style>
+/* ── SPA-specific additions ────────────────────────────────────── */
+.spa-section { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.spa-section.active { display: flex; }
+
+/* Dashboard section: scrollable page */
+#sec-dashboard { overflow-y: auto; }
+#sec-dashboard .dash-page { padding: 22px 24px; max-width: 1440px; }
+
+/* Scheduler section: fixed-height board */
+#sec-scheduler { flex-direction: column; }
+
+/* Employees / Reports / Settings: scrollable */
+#sec-employees, #sec-reports, #sec-settings { overflow-y: auto; padding: 22px 24px; }
+
+/* Animate section transitions */
+.spa-section.active { animation: fadeIn .16s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Dashboard expiry rows */
+.dash-expiry-row { display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line); }
+.dash-expiry-row:last-child { border-bottom:0; }
+.dash-expiry-num { font-size:1.5rem;font-weight:800;min-width:40px; }
+.dash-presence-row { display:flex;align-items:center;gap:8px;padding:4px 0; }
+.dash-pl { width:76px;font-size:.72rem;color:var(--muted); }
+.mod-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px; }
+.mod-card { display:flex;flex-direction:column;gap:6px;padding:15px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--card);cursor:pointer;transition:all var(--transition); }
+.mod-card:hover { border-color:var(--brand);box-shadow:0 4px 16px rgba(79,70,229,.1);transform:translateY(-2px); }
+.mod-icon { font-size:1.3rem;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--brand-lt); }
+.mod-title { font-size:.82rem;font-weight:700; }
+.mod-sub   { font-size:.7rem;color:var(--muted); }
+
+/* Notification item */
+.ph-notif-item { padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;transition:background var(--transition); }
+.ph-notif-item:hover { background:var(--bg2); }
+.ph-notif-item:last-child { border-bottom:0; }
+.ph-notif-item.unread { background:var(--brand-lt); }
+.ph-notif-title { font-size:.8rem;font-weight:600;margin-bottom:2px; }
+.ph-notif-body  { font-size:.72rem;color:var(--muted);margin-bottom:3px; }
+.ph-notif-ts    { font-size:.65rem;color:var(--muted); }
+
+/* Scheduler overlays inside SPA */
+.overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:5000;align-items:center;justify-content:center;padding:20px; }
+.overlay.on { display:flex; }
+.obox { background:var(--card);border-radius:13px;padding:22px;max-width:480px;width:100%;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto; }
+.obox h2 { font-size:.95rem;font-weight:700;margin-bottom:14px; }
+.obox-close { float:right;margin-left:8px;width:26px;height:26px;border-radius:7px;background:var(--bg2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:.82rem; }
+.obox-close:hover { background:var(--line); }
+/* Scheduler legacy styles needed for non-board views */
+.view { display:none; }.view.on { display:block; }
+.chip { display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:800; }
+.codegrp h4 { font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 5px; }
+.codegrid { display:flex;flex-wrap:wrap;gap:5px; }
+.codegrid button { padding:6px 10px;border-radius:7px;font-size:.75rem;font-weight:700;border:1.5px solid transparent;cursor:pointer;transition:all .12s; }
+.codegrid button.sel { border-color:var(--ink); }
+.c-n,.c-name { position:sticky;left:0;background:var(--card);z-index:5; }
+.c-n { min-width:38px;max-width:38px;text-align:center; }
+.c-name { min-width:180px;max-width:220px; }
+.stick { position:sticky;left:0;background:var(--card);z-index:5; }
+.gridwrap { overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r);max-height:calc(100vh - 300px); }
+table.grid { border-collapse:separate;border-spacing:0;font-size:.78rem;white-space:nowrap; }
+table.grid th { background:var(--card);position:sticky;top:0;z-index:10;border-bottom:1.5px solid var(--line);padding:7px 5px;text-align:center;min-width:44px;font-weight:700; }
+table.grid td { padding:3px 3px;border-bottom:1px solid var(--line);border-right:1px solid var(--line); }
+table.grid td.cell { text-align:center;cursor:pointer; }
+table.grid td.cell:hover { background:rgba(79,70,229,.07); }
+table.grid tr.foot td { background:var(--bg);font-size:.75rem;padding:4px 5px;text-align:center; }
+table.grid tr.foot .lbl { text-align:left;font-weight:700;color:var(--muted);font-size:.72rem;text-transform:uppercase; }
+table.grid tr.empty td { padding:24px;text-align:center;color:var(--muted);font-style:italic; }
+.neg { color:var(--bad);font-weight:700; }
+.wend { background:rgba(0,0,0,.02); }
+.today { background:rgba(79,70,229,.06); }
+.viol  { background:rgba(220,38,38,.06); }
+.heat  { display:block;height:3px;border-radius:2px;margin-top:2px; }
+.c-tot,.c-ctr { text-align:center;color:var(--muted);font-size:.72rem; }
+.weeks th { background:var(--ink);color:#fff;font-size:.72rem; }
+.banner { background:var(--warn-bg);border:1px solid var(--warn);color:#7a4a00;border-radius:var(--r);padding:9px 13px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.82rem; }
+.planhead { font-size:1rem;font-weight:700;margin-bottom:8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap; }
+.planhead small { font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em; }
+.toolbar { display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px; }
+.toolbar input[type=search] { padding:7px 10px;border:1px solid var(--line2);border-radius:8px;min-width:130px;flex:1;max-width:240px; }
+.toolbar select { padding:7px 9px;border:1px solid var(--line2);border-radius:8px;background:var(--card); }
+.btn { background:var(--ink);color:#fff;padding:7px 13px;border-radius:8px;font-weight:600;font-size:.82rem;display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:none;transition:all .14s; }
+.btn:active { transform:scale(.97); }
+.btn.ghost { background:var(--card);color:var(--ink);border:1px solid var(--line2); }
+.btn.ghost:hover { background:var(--bg2); }
+.btn.warn { background:var(--bad); }
+.btn.amber { background:#F59E0B;color:#1A1A2E; }
+.btn.ok { background:var(--ok); }
+.btn.sm { padding:5px 10px;font-size:.76rem; }
+.btn:disabled { opacity:.4;cursor:not-allowed; }
+.seg { display:inline-flex;border:1.5px solid var(--line2);border-radius:7px;overflow:hidden; }
+.seg button { padding:5px 11px;font-weight:600;font-size:.78rem;background:var(--card);color:var(--muted);transition:all .14s; }
+.seg button.on { background:var(--brand);color:#fff; }
+.seg button:hover:not(.on) { background:var(--bg2); }
+.weeknav { display:inline-flex;align-items:center;gap:4px; }
+.weeknav button { padding:5px 9px;border:1px solid var(--line2);border-radius:7px;background:var(--card);font-weight:700; }
+.weeknav span { font-weight:600;font-size:.82rem;min-width:160px;text-align:center; }
+.chartcard { background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px; }
+.chartcard h3 { font-size:.85rem;font-weight:700;margin-bottom:2px; }
+.chartcard .sub { font-size:.72rem;color:var(--muted);margin-bottom:10px; }
+.chartcard.span2 { grid-column:span 2; }
+.an-kpis { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px; }
+.an-kpi { background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;text-align:center; }
+.an-kpi .val { font-size:1.5rem;font-weight:800;color:var(--brand);margin-bottom:2px; }
+.an-kpi .lbl { font-size:.72rem;color:var(--muted);font-weight:600; }
+/* admin visibility inside SPA */
+.adminonly { display:none!important; }
+body.is-admin .adminonly { display:flex!important; }
+body.is-admin .adminonly.block { display:block!important; }
+body.is-admin .adminonly.inline-flex { display:inline-flex!important; }
+.teamonly { display:none!important; }
+body.is-team .teamonly { display:inline-flex!important; }
+</style>
+</head>
+<body>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
 <div id="toast-container"></div>
 <div id="autosaveIndicator"><span id="autosaveIcon">⏳</span><span id="autosaveText">Salvataggio…</span></div>
 <div id="undoBar">
@@ -18,6 +136,7 @@
 </div>
 <div id="kbdHint"></div>
 
+<<<<<<< HEAD
 <!-- Context menu (scheduler cells) -->
 <div id="ctxMenu">
   <div class="ctx-item" onclick="boardCtxAction('edit')">✏️ Modifica</div>
@@ -35,6 +154,25 @@
 
   <!-- ── Sidebar (app-nav) ── -->
   <nav class="app-nav" id="appNav">
+=======
+<!-- Context menu (scheduler) -->
+<div id="ctxMenu" style="position:fixed;z-index:700;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);padding:5px 0;min-width:155px;display:none">
+  <div style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .14s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('edit')">✏️ Modifica</div>
+  <div style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .14s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('copy')">📋 Copia</div>
+  <div id="ctx-paste" style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .14s;display:none" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('paste')">📌 Incolla</div>
+  <div style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .14s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('duplicate')">⊕ Duplica settimana</div>
+  <div style="height:1px;background:var(--line);margin:4px 0"></div>
+  <div style="padding:8px 13px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--bad);transition:background .14s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''" onclick="boardCtxAction('delete')">🗑 Svuota</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     APP SHELL
+     ════════════════════════════════════════ -->
+<div class="plat-shell">
+
+  <!-- ── Left Sidebar ── -->
+  <nav class="plat-nav" id="platNav">
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
     <div class="nav-brand">
       <div class="nav-brand-icon">🚚</div>
       <div>
@@ -44,6 +182,7 @@
     </div>
 
     <div class="nav-user">
+<<<<<<< HEAD
       <div class="nav-user-avatar" id="navAvatar">—</div>
       <div>
         <div class="nav-user-name" id="navUname">—</div>
@@ -90,10 +229,61 @@
         <span class="save-pill" id="saveState"></span>
       </div>
       <button class="nav-logout" onclick="doLogout()"><span>↪</span>Esci</button>
+=======
+      <div class="nav-avatar" id="navAvatar">—</div>
+      <div>
+        <div class="nav-uname" id="navUname">—</div>
+        <div class="nav-role"  id="navRole">—</div>
+      </div>
+    </div>
+
+    <div class="nav-group-label">Piattaforma</div>
+    <button class="nav-link active" data-section="dashboard" onclick="navigate('dashboard')">
+      <span class="nl-icon">📊</span>Dashboard
+    </button>
+    <button class="nav-link" data-section="scheduler" onclick="navigate('scheduler')">
+      <span class="nl-icon">🗓</span>Scheduler turni
+    </button>
+    <button class="nav-link" data-section="employees" onclick="navigate('employees')">
+      <span class="nl-icon">👥</span>Dipendenti
+    </button>
+    <button class="nav-link" data-section="reports" onclick="navigate('reports')">
+      <span class="nl-icon">📈</span>Report &amp; Analytics
+    </button>
+
+    <div class="nav-group-label adminonly">Admin</div>
+    <button class="nav-link adminonly" data-section="settings" onclick="navigate('settings')">
+      <span class="nl-icon">⚙</span>Impostazioni
+    </button>
+
+    <!-- Scheduler sub-nav (visible only in scheduler section) -->
+    <div id="sched-subnav" style="display:none;margin-top:6px">
+      <div class="nav-group-label">Viste scheduler</div>
+      <button class="nav-link" data-v="plan"  onclick="schedSetView('plan')" ><span class="nl-icon">📅</span>Pianificazione</button>
+      <button class="nav-link" data-v="cov"   onclick="schedSetView('cov')" ><span class="nl-icon">📊</span>Copertura</button>
+      <button class="nav-link" data-v="das"   onclick="schedSetView('das')" ><span class="nl-icon">👤</span>Anagrafica DAS</button>
+      <button class="nav-link" data-v="contr" onclick="schedSetView('contr')"><span class="nl-icon">📋</span>Contratti</button>
+      <button class="nav-link" data-v="leg"   onclick="schedSetView('leg')" ><span class="nl-icon">📖</span>Legenda</button>
+      <button class="nav-link adminonly" data-v="an"   onclick="schedSetView('an')"  ><span class="nl-icon">📉</span>Analisi</button>
+      <button class="nav-link adminonly" data-v="cfg"  onclick="schedSetView('cfg')" ><span class="nl-icon">🔧</span>Config</button>
+      <button class="nav-link adminonly" data-v="log"  onclick="schedSetView('log')" ><span class="nl-icon">📝</span>Registro</button>
+      <button class="nav-link adminonly" data-v="data" onclick="schedSetView('data')"><span class="nl-icon">🗄</span>Dati &amp; Sync</button>
+    </div>
+
+    <div class="nav-bottom">
+      <div class="nav-sync-pill" id="navSync">🔵 Connesso</div>
+      <div style="padding:4px 12px">
+        <span class="save-pill" id="saveState" style="font-size:.7rem;color:var(--muted)"></span>
+      </div>
+      <button class="nav-logout" onclick="doLogout()">
+        <span>↪</span>Esci
+      </button>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
     </div>
   </nav>
 
   <!-- ── Content area ── -->
+<<<<<<< HEAD
   <div class="app-content">
 
     <!-- ── Shared top header ── -->
@@ -122,28 +312,71 @@
           <div class="notif-panel-head">
             <span>Notifiche</span>
             <button class="header-btn sm" onclick="markAllRead()" style="font-size:.7rem">Segna lette</button>
+=======
+  <div class="plat-content" id="platContent">
+
+    <!-- ── Shared Top Header ── -->
+    <header class="plat-header">
+      <div>
+        <span class="ph-title" id="pageTitle">Dashboard</span>
+        <span class="ph-sub"   id="pageSubtitle"></span>
+      </div>
+      <div class="ph-spacer"></div>
+
+      <!-- Global search -->
+      <div class="ph-search">
+        <input id="globalSearch" placeholder="Cerca dipendente, ID…" autocomplete="off"
+               oninput="debouncedGlobalSearch(this.value)"
+               onblur="setTimeout(()=>{document.getElementById('searchDropdown').style.display='none'},200)">
+        <div id="searchDropdown" class="ph-search-dd"></div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="ph-notif">
+        <button class="ph-notif-btn" onclick="toggleNotifPanel()" title="Notifiche">
+          🔔<span class="ph-notif-badge" id="notifBadge" style="display:none">0</span>
+        </button>
+        <div class="ph-notif-panel" id="notifPanel" style="display:none">
+          <div class="ph-notif-head">
+            <span>Notifiche</span>
+            <button class="btn-ghost btn-sm" style="padding:3px 8px;font-size:.7rem;background:var(--card);border:1px solid var(--line2);border-radius:6px;cursor:pointer" onclick="markAllRead()">Segna lette</button>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
           </div>
           <div id="notifList"></div>
         </div>
       </div>
 
+<<<<<<< HEAD
       <!-- Scheduler-specific controls (shown when scheduler is active) -->
       <div id="schedHeader" style="display:none;align-items:center;gap:8px">
         <span class="role-badge"><span class="role-dot"></span><span id="roleTxt">Team</span></span>
+=======
+      <!-- Scheduler controls (shown only in scheduler section) -->
+      <div id="schedHeader" style="display:none;align-items:center;gap:8px">
+        <span class="role-badge" id="roleBadge"><span class="role-dot"></span><span id="roleTxt">Team</span></span>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
         <button class="branch-chip teamonly" id="filChip" onclick="openFilialePick()">
           📍 <span id="filChipTxt">—</span> ▾
         </button>
         <button class="nav-arrow" onclick="shiftMonth(-1)">‹</button>
         <span class="period-label" id="monthLabel">—</span>
         <button class="nav-arrow" onclick="shiftMonth(1)">›</button>
+<<<<<<< HEAD
       </div>
 
       <!-- Dashboard controls (shown when dashboard is active) -->
+=======
+        <span class="save-pill" id="schedSaveState" style="font-size:.7rem;color:var(--muted)"></span>
+      </div>
+
+      <!-- Dashboard controls -->
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
       <div id="dashHeader" style="display:flex;align-items:center;gap:8px">
         <input type="date" id="kpiDate" class="inp" style="width:136px;font-size:.78rem;padding:6px 9px">
         <select id="branchSel" class="sel" style="font-size:.78rem">
           <option value="">Tutte le filiali</option>
         </select>
+<<<<<<< HEAD
         <button class="header-btn primary" onclick="refreshAll()">↻ Aggiorna</button>
       </div>
 
@@ -486,6 +719,344 @@
 </div><!-- /app-shell -->
 
 <!-- ── Shift editor (right drawer) ── -->
+=======
+        <button class="h-pill primary" onclick="refreshAll()">↻ Aggiorna</button>
+      </div>
+
+      <button class="h-pill" id="headerLoginBtn" onclick="toggleLogin()" style="display:none">Accedi</button>
+    </header>
+
+    <!-- ════════════════════════════════════
+         SECTIONS
+         ════════════════════════════════════ -->
+
+    <!-- ── DASHBOARD ── -->
+    <div class="spa-section active" id="sec-dashboard">
+      <div class="dash-page">
+        <div class="page-head">
+          <div>
+            <div class="page-title" id="greetTitle">Dashboard</div>
+            <div class="page-sub"   id="greetSub"></div>
+          </div>
+          <span id="dspDateLabel" class="text-sm text-muted"></span>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi-card pri skel" style="height:120px"></div>
+          <div class="kpi-card ok  skel fade-in-1" style="height:120px"></div>
+          <div class="kpi-card bad skel fade-in-2" style="height:120px"></div>
+          <div class="kpi-card warn skel fade-in-3" style="height:120px"></div>
+        </div>
+
+        <!-- Row 2 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">🎯 Forecast vs Pianificato</span>
+              <span class="badge b-muted" id="fcBadge">—</span>
+            </div>
+            <div id="fcContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">📋 Contratti in scadenza</span>
+            </div>
+            <div id="expiryContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
+          <div class="card cp">
+            <div class="section-head">
+              <span class="section-title">👁 Presenza oggi</span>
+            </div>
+            <div id="attContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+          </div>
+        </div>
+
+        <!-- DSP table  -->
+        <div class="card cp mb-4">
+          <div class="section-head">
+            <span class="section-title">🚚 Operatività per filiale</span>
+            <button class="h-pill btn-sm" style="font-size:.72rem" onclick="navigate('scheduler')">→ Apri Scheduler</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="tbl" id="dspTbl">
+              <thead><tr><th>Filiale</th><th>Driver totali</th><th>In turno</th><th>Copertura</th></tr></thead>
+              <tbody><tr><td colspan="4"><div class="skel" style="height:22px;border-radius:6px"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Expiry alerts -->
+        <div class="card cp mb-4">
+          <div class="section-head">
+            <span class="section-title">⏰ Scadenze prossime (60 gg)</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="tbl" id="alertsTbl">
+              <thead><tr><th>Dipendente</th><th>Tipo</th><th>Scadenza</th><th>Giorni</th><th>Stato</th></tr></thead>
+              <tbody><tr><td colspan="5"><div class="skel" style="height:22px;border-radius:6px"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <div class="chart-card" style="grid-column:span 2">
+            <div class="chart-title">Presenze ultimi 30 giorni</div>
+            <div style="height:200px"><canvas id="chartAtt"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Forecast vs Pianificato (30 gg)</div>
+            <div style="height:200px"><canvas id="chartFc"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Tipi di assenza (90 gg)</div>
+            <div style="height:200px"><canvas id="chartAbs"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Crescita dipendenti (12 mesi)</div>
+            <div style="height:200px"><canvas id="chartGrow"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /sec-dashboard -->
+
+    <!-- ── SCHEDULER ── -->
+    <div class="spa-section" id="sec-scheduler">
+
+      <!-- Scheduler toolbar -->
+      <div class="sch-toolbar" id="planToolbar">
+        <button class="today-btn" onclick="goToToday()">Oggi</button>
+        <button class="nav-arrow" onclick="shiftWeek(-1)">‹</button>
+        <button class="nav-arrow" onclick="shiftWeek(1)">›</button>
+        <span id="weekNav"></span>
+        <div class="t-divider"></div>
+        <div class="view-seg" id="planModeSeg">
+          <button class="on" data-pm="week"  onclick="setPlanMode('week')">Settimana</button>
+          <button data-pm="month" onclick="setPlanMode('month')">Mese</button>
+        </div>
+        <div class="t-divider"></div>
+        <div class="t-search"><input type="search" id="q" placeholder="Cerca DAS…" oninput="renderGrid()" autocomplete="off"></div>
+        <select class="t-sel" id="fFiliale" onchange="renderGrid()"></select>
+        <select class="t-sel" id="fService" onchange="renderGrid()"></select>
+        <select class="t-sel" id="fStato" onchange="renderGrid()">
+          <option value="">Tutti gli stati</option>
+          <option value="turno">In turno</option>
+          <option value="riposo">Riposo (OFF)</option>
+          <option value="assente">Assenti</option>
+          <option value="dispo">Disponibili</option>
+        </select>
+        <div class="ph-spacer"></div>
+        <button class="h-pill adminonly" onclick="openAuto()">⚙ Genera</button>
+        <button class="h-pill adminonly" onclick="openImport()">⬆ Importa</button>
+        <button class="h-pill primary adminonly" onclick="openAddDriver()">+ DAS</button>
+      </div>
+
+      <!-- Scheduler views -->
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column" id="schedViewport">
+        <!-- PLANNING (board) -->
+        <div class="sch-view on" id="v-plan" style="flex:1;overflow:hidden;flex-direction:column">
+          <div class="adminonly" id="autoBanner" style="display:none;background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px 16px;font-size:.8rem"></div>
+          <div id="violBanner" style="display:none;background:var(--bad-bg);border-bottom:1px solid var(--bad);padding:8px 16px;font-size:.8rem"></div>
+          <div class="board-outer" id="boardOuter">
+            <div id="boardInner">
+              <div class="board-empty"><div class="ei">🗓️</div><p>Caricamento turni…</p></div>
+            </div>
+          </div>
+          <!-- Bottom KPI bar -->
+          <div class="sch-bottom-bar">
+            <div class="bkpi pri"><div class="bkpi-val" id="kpiDrivers">—</div><div class="bkpi-lbl">Driver</div></div>
+            <div class="bkpi ok"> <div class="bkpi-val" id="kpiPresent">—</div><div class="bkpi-lbl">In turno</div></div>
+            <div class="bkpi bad"><div class="bkpi-val" id="kpiAbsent">—</div><div class="bkpi-lbl">Assenti</div></div>
+            <div class="bkpi warn"><div class="bkpi-val" id="kpiOff">—</div><div class="bkpi-lbl">OFF</div></div>
+            <div class="bkpi"><div class="bkpi-val" id="kpiFc">—</div><div class="bkpi-lbl">Forecast</div></div>
+            <div class="bkpi"><div class="bkpi-val" id="kpiCov">—</div><div class="bkpi-lbl">Copertura</div></div>
+            <div class="bkpi bad"><div class="bkpi-val" id="kpiViol">0</div><div class="bkpi-lbl">Conflitti</div></div>
+            <div class="bkpi" style="margin-left:auto">
+              <div class="bkpi-val" style="font-size:.72rem;font-weight:600;color:var(--muted)" id="kpiSyncBar">—</div>
+              <div class="bkpi-lbl">Sync</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Other scheduler views -->
+        <div class="sch-view" id="v-cov" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Copertura &amp; Delta <small id="covScope"></small></h1>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+            <div class="seg" id="covRangeSeg">
+              <button class="on" data-cr="week" onclick="setCovRange('week')">Settimana</button>
+              <button data-cr="month" onclick="setCovRange('month')">Mese</button>
+            </div>
+            <div class="weeknav" id="covWeekNav"></div>
+            <button class="btn ghost sm" onclick="toggleFcDelta()">Mostra forecast</button>
+          </div>
+          <div style="overflow:auto"><table class="grid" id="covGrid"></table></div>
+        </div>
+        <div class="sch-view" id="v-das" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Anagrafica DAS <small id="dasScope"></small></h1>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+            <input type="search" id="qDas" placeholder="Cerca…" oninput="renderDas()" style="padding:7px 10px;border:1px solid var(--line2);border-radius:8px;flex:1;max-width:220px">
+            <select id="aFiliale" onchange="renderDas()" class="t-sel"></select>
+            <select id="aStato"   onchange="renderDas()" class="t-sel">
+              <option value="">Tutti</option><option value="active">Attivi</option>
+              <option value="inactive">Inattivi</option><option value="pending">In attesa</option>
+            </select>
+            <button class="btn ghost sm" onclick="exportDas()">⬇ CSV</button>
+          </div>
+          <div style="overflow:auto"><table id="dasTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="sch-view" id="v-contr" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Contratti &amp; Scadenze</h1>
+          <div style="overflow:auto"><table id="contrTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="sch-view adminonly" id="v-appr" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Approvazioni DAS</h1>
+          <div id="apprList"></div>
+        </div>
+        <div class="sch-view adminonly" id="v-cfg" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Configurazione</h1>
+          <div class="seg" style="margin-bottom:14px">
+            <button class="on" data-ct="filiali"   onclick="setCfgTab('filiali')">Filiali</button>
+            <button data-ct="codes"     onclick="setCfgTab('codes')">Codici</button>
+            <button data-ct="services"  onclick="setCfgTab('services')">Servizi</button>
+            <button data-ct="contracts" onclick="setCfgTab('contracts')">Contratti</button>
+            <button data-ct="users"     onclick="setCfgTab('users')">Account</button>
+            <button data-ct="counters"  onclick="setCfgTab('counters')">Contatori</button>
+          </div>
+          <div id="cfgBody"></div>
+        </div>
+        <div class="sch-view adminonly" id="v-an" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Analisi</h1>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <select id="anFiliale" onchange="renderAnalysis()" class="t-sel"></select>
+            <button class="btn ghost sm" onclick="exportAnalysis()">⬇ CSV</button>
+            <button class="btn ghost sm" onclick="exportOvertime()">⬇ Straordinari</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="anKpis"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="anCharts"></div>
+        </div>
+        <div class="sch-view adminonly" id="v-log" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Registro modifiche</h1>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input type="search" id="qLog" placeholder="Cerca…" oninput="renderLog()" style="padding:7px 10px;border:1px solid var(--line2);border-radius:8px;max-width:220px">
+            <button class="btn ghost sm" onclick="exportLog()">⬇ CSV</button>
+            <button class="btn warn sm adminonly" onclick="clearLog()">🗑 Svuota</button>
+          </div>
+          <div style="overflow:auto"><table id="logTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"></table></div>
+        </div>
+        <div class="sch-view" id="v-leg" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Legenda codici turno</h1>
+          <div style="overflow:auto"><table id="legTbl" style="width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:14px"></table></div>
+          <h2 style="font-size:.85rem;font-weight:700;margin-bottom:8px">Inquadramenti contrattuali</h2>
+          <div style="overflow:auto"><table id="ctrTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"></table></div>
+        </div>
+        <div class="sch-view adminonly" id="v-data" style="overflow:auto;padding:16px">
+          <h1 class="planhead">Dati &amp; Sincronizzazione</h1>
+          <p class="text-sm text-muted" style="margin-bottom:14px">Fonte di verità: PostgreSQL. localStorage è solo cache locale.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+            <button class="btn ghost sm" onclick="exportJson()">⬇ Esporta JSON</button>
+            <label class="btn ghost sm">⬆ Importa JSON<input type="file" accept=".json" onchange="importJson(event)" style="display:none"></label>
+            <button class="btn warn sm adminonly" onclick="resetMonth()" style="font-size:.76rem">🗑 Azzera mese</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="apiUrl" class="inp" placeholder="URL endpoint legacy (opzionale)" style="max-width:340px;font-size:.8rem">
+            <button class="btn ghost sm" onclick="syncPull()">⬇ Pull</button>
+            <button class="btn ghost sm" onclick="syncPush()">⬆ Push</button>
+          </div>
+          <label style="display:flex;align-items:center;gap:7px;font-size:.8rem;cursor:pointer">
+            <input type="checkbox" id="autoGenChk" onchange="toggleAutoGen()">
+            Genera turni automaticamente all'inizio del mese
+          </label>
+          <div id="syncMsg" class="text-sm text-muted mt-2"></div>
+        </div>
+      </div><!-- /schedViewport -->
+
+    </div><!-- /sec-scheduler -->
+
+    <!-- ── EMPLOYEES ── -->
+    <div class="spa-section" id="sec-employees">
+      <div class="page-head">
+        <div>
+          <div class="page-title">👥 Dipendenti</div>
+          <div class="page-sub">Anagrafica, contratti, documenti</div>
+        </div>
+      </div>
+      <div class="card cp" style="max-width:900px">
+        <p class="text-muted text-sm" style="margin-bottom:12px">Il modulo dipendenti completo è disponibile nella pagina dedicata.</p>
+        <a class="btn btn-pri" href="employees.html" target="_blank">Apri modulo dipendenti ↗</a>
+      </div>
+    </div>
+
+    <!-- ── REPORTS ── -->
+    <div class="spa-section" id="sec-reports">
+      <div class="page-head">
+        <div class="page-title">📈 Report &amp; Analytics</div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card" style="grid-column:span 2">
+          <div class="chart-title">Presenze ultimi 30 giorni</div>
+          <div style="height:220px"><canvas id="rptChartAtt"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Forecast vs Pianificato</div>
+          <div style="height:220px"><canvas id="rptChartFc"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Tipi assenza (90 gg)</div>
+          <div style="height:220px"><canvas id="rptChartAbs"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Crescita dipendenti</div>
+          <div style="height:220px"><canvas id="rptChartGrow"></canvas></div>
+        </div>
+      </div>
+      <div class="card cp mt-4">
+        <div class="section-title mb-2">📁 Export</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <a class="btn btn-ghost btn-sm" id="rptExpEmp">⬇ Dipendenti Excel</a>
+          <a class="btn btn-ghost btn-sm" id="rptExpFc">⬇ Forecast Excel</a>
+          <a class="btn btn-ghost btn-sm" id="rptExpSch">⬇ Turni Excel</a>
+          <a class="btn btn-ghost btn-sm" id="rptPdfMonth">🖨 Turni mese PDF</a>
+          <a class="btn btn-ghost btn-sm" id="rptPdfAbs">🖨 Assenze PDF</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS (admin) ── -->
+    <div class="spa-section adminonly" id="sec-settings">
+      <div class="page-head">
+        <div class="page-title">⚙ Impostazioni</div>
+      </div>
+      <div class="card cp mb-4" style="max-width:700px">
+        <div class="section-title mb-2">👤 Crea account utente</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end">
+          <div><label class="lbl">Username</label><input id="nuUser" class="inp" autocapitalize="off"></div>
+          <div><label class="lbl">Password</label><input id="nuPass" class="inp" type="text"></div>
+          <div><label class="lbl">Nome</label><input id="nuName" class="inp"></div>
+          <div><label class="lbl">Ruolo</label>
+            <select id="nuRole" class="sel" style="width:100%">
+              <option value="team_leader">Team Leader</option>
+              <option value="osm">OSM</option>
+              <option value="hr_manager">HR Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div><label class="lbl">Filiali</label><select id="nuBranches" class="sel" style="width:100%" multiple size="3"></select></div>
+          <div><button class="btn btn-pri w-full" onclick="createUser()">+ Crea account</button></div>
+        </div>
+        <div id="nuMsg" class="text-sm mt-2"></div>
+      </div>
+      <div class="card cp" style="max-width:700px">
+        <div class="section-title mb-2">Lista utenti</div>
+        <div style="overflow-x:auto"><table class="tbl" id="usersTbl"></table></div>
+      </div>
+    </div>
+
+  </div><!-- /plat-content -->
+</div><!-- /plat-shell -->
+
+<!-- ── Slide panel (shift editor) ── -->
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
 <div id="slidePanel">
   <div class="sp-head">
     <div><h3 id="spTitle">Turno</h3><p id="spSub">—</p></div>
@@ -505,14 +1076,22 @@
       <label>Note</label>
       <textarea id="spNote" placeholder="Note opzionali…"></textarea>
     </div>
+<<<<<<< HEAD
     <hr class="divider">
+=======
+    <hr style="border:0;border-top:1px solid var(--line);margin:4px 0 12px">
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="sp-field"><label>Driver</label><select id="spDriver"></select></div>
       <div class="sp-field"><label>Giorno</label><input id="spDay" type="number" min="1" max="31"></div>
     </div>
     <div class="sp-field">
       <label>Info driver</label>
+<<<<<<< HEAD
       <div id="spDriverInfo" class="text-sm text-muted" style="padding:4px 0"></div>
+=======
+      <div id="spDriverInfo" style="font-size:.78rem;color:var(--muted);padding:4px 0"></div>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
     </div>
   </div>
   <div class="sp-footer">
@@ -528,7 +1107,11 @@
   <div class="obox" style="max-width:520px">
     <button class="obox-close" onclick="closeAll()">✕</button>
     <h2 id="pkTitle">Seleziona turno</h2>
+<<<<<<< HEAD
     <p class="text-sm text-muted" id="pkSub" style="margin:-6px 0 12px"></p>
+=======
+    <p style="font-size:.78rem;color:var(--muted);margin:-6px 0 12px" id="pkSub"></p>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
     <div id="pkBody"></div>
   </div>
 </div>
@@ -540,11 +1123,22 @@
       <div><label class="lbl">Username (opzionale)</label><input id="luUser" class="inp" placeholder="Lascia vuoto per Admin"></div>
       <div><label class="lbl">PIN</label><input id="luPin" class="inp" type="password" maxlength="12" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn" onclick="doLogin()">Accedi</button>
+<<<<<<< HEAD
       <div id="luMsg" class="text-sm" style="color:var(--bad)"></div>
       <hr class="divider">
       <div class="adminonly">
         <label class="lbl">Nuovo PIN admin</label>
         <div style="display:flex;gap:7px"><input id="pinNew" class="inp flex-1" type="text" placeholder="Nuovo PIN"><button class="btn ghost sm" onclick="changePin()">Salva</button></div>
+=======
+      <div id="luMsg" style="font-size:.8rem;color:var(--bad)"></div>
+      <hr style="border:0;border-top:1px solid var(--line)">
+      <div class="adminonly">
+        <label class="lbl">Nuovo PIN admin</label>
+        <div style="display:flex;gap:7px">
+          <input id="pinNew" class="inp" type="text" placeholder="Nuovo PIN" style="flex:1">
+          <button class="btn ghost sm" onclick="changePin()">Salva</button>
+        </div>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
       </div>
     </div>
   </div>
@@ -557,7 +1151,11 @@
       <div><label class="lbl">Filiale</label><select id="autoFil" class="sel w-full"></select></div>
       <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="autoOverwrite"> Sovrascrivi celle già compilate</label>
       <button class="btn" onclick="runAutoGen()">▶ Genera</button>
+<<<<<<< HEAD
       <div id="autoMsg" class="text-sm text-muted"></div>
+=======
+      <div id="autoMsg" style="font-size:.8rem;color:var(--muted)"></div>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
     </div>
   </div>
 </div>
@@ -571,7 +1169,11 @@
         <textarea id="ewArea" class="inp" rows="8" placeholder="Rossi Mario DLO1 21 NEXT&#10;Bianchi Laura DLO7 PTV 18h SAME A"></textarea>
       </div>
       <button class="btn" onclick="importEw()">Importa</button>
+<<<<<<< HEAD
       <div id="ewMsg" class="text-sm text-muted"></div>
+=======
+      <div id="ewMsg" style="font-size:.8rem;color:var(--muted)"></div>
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
     </div>
   </div>
 </div>
@@ -594,7 +1196,10 @@
 
 <script>
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
 /* ============================================================
    TurniDSP v4 — vista settimanale, filiali configurabili,
    scoping per filiale (team), import/export DAS, export
@@ -1968,7 +2573,11 @@ async function loadNotifications() {
           ${n.body?`<div class="ph-notif-body">${esc(n.body)}</div>`:''}
           <div class="ph-notif-ts">${fmtTs(n.created_at)}</div>
         </div>`).join('')
+<<<<<<< HEAD
       : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--text-muted)">Nessuna notifica</div>';
+=======
+      : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--muted)">Nessuna notifica</div>';
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
   } catch {}
 }
 // clickNotif() defined in SPA layer below
@@ -2113,7 +2722,11 @@ function debouncedGlobalSearch(q) {
 async function doGlobalSearch(q) {
   var dd = document.getElementById('searchDropdown');
   dd.style.display = 'block';
+<<<<<<< HEAD
   dd.innerHTML = '<div class="sd-item" style="pointer-events:none;color:var(--text-muted)">Ricerca…</div>';
+=======
+  dd.innerHTML = '<div class="sd-item" style="pointer-events:none;color:var(--muted)">Ricerca…</div>';
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
   try {
     var r = await TurniApi.search(q, 12);
     var icons = {employee:'👤',document:'📄',absence:'🏥'};
@@ -2124,7 +2737,11 @@ async function doGlobalSearch(q) {
             '<div class="flex-1"><div class="sd-title">'+esc(x.title)+'</div><div class="sd-sub">'+esc(x.subtitle||'')+'</div></div>'+
             '<span class="sd-type">'+x.type+'</span></a>';
         }).join('')
+<<<<<<< HEAD
       : '<div class="sd-item" style="pointer-events:none;color:var(--text-muted)">Nessun risultato</div>';
+=======
+      : '<div class="sd-item" style="pointer-events:none;color:var(--muted)">Nessun risultato</div>';
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
   } catch {
     dd.innerHTML = '<div class="sd-item" style="pointer-events:none;color:var(--bad)">Errore ricerca</div>';
   }
@@ -2146,7 +2763,11 @@ async function loadNotifPanel() {
             (n.body?'<div class="ph-notif-body">'+esc(n.body)+'</div>':'')+
             '<div class="ph-notif-ts">'+fmtTs(n.created_at)+'</div></div>';
         }).join('')
+<<<<<<< HEAD
       : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--text-muted)">Nessuna notifica</div>';
+=======
+      : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--muted)">Nessuna notifica</div>';
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
   } catch {}
 }
 async function clickNotif(id,url){try{await TurniApi.markRead(id);}catch{} if(url)location.href=url;else toggleNotifPanel();loadNotifPanel();}
@@ -2171,7 +2792,11 @@ async function loadUsers(){
       rows.map(function(u){return '<tr><td><b>'+esc(u.username)+'</b></td><td>'+esc(u.full_name||'')+'</td>'+
         '<td>'+rl(u.role)+'</td>'+
         '<td><span class="badge '+(u.active?'b-ok':'b-warn')+'">'+(u.active?'attivo':'disattivo')+'</span></td>'+
+<<<<<<< HEAD
         '<td style="font-size:.78rem;color:var(--text-muted)">'+fmtTs2(u.last_login)+'</td>'+
+=======
+        '<td style="font-size:.78rem;color:var(--muted)">'+fmtTs2(u.last_login)+'</td>'+
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
         '<td style="display:flex;gap:5px"><button class="btn ghost sm" onclick="toggleUser('+u.id+','+!u.active+')">'+(u.active?'Disattiva':'Attiva')+'</button>'+
         '<button class="btn ghost sm" onclick="resetPw('+u.id+')">Reset pw</button></td></tr>';
       }).join('')+'</tbody>';
@@ -2223,7 +2848,10 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('navSync').textContent = '🟢 PostgreSQL';
 });
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> a7dc3858790da8a537a85c4405534e528d526ea4
 </script>
 </body>
 </html>

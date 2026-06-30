@@ -2,587 +2,526 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TurniDSP — Piattaforma</title>
-<link rel="stylesheet" href="platform.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Gestione Turni — Global One S.p.A.</title>
+<style>
+:root{
+  --ink:#16233B; --ink-2:#22324F; --paper:#F7F8FA; --card:#FFFFFF;
+  --line:#E3E6EC; --line-2:#CCD2DD; --txt:#1C2433; --muted:#6B7689;
+  --amber:#F5A623; --amber-soft:#FFF3DC;
+  --ok:#2E9E5B; --ok-soft:#E2F5EA; --bad:#D6453D; --bad-soft:#FBE7E5;
+  --warn:#C77700; --warn-soft:#FCEFD3;
+  --next:#B97E10; --next-bg:#FDEDC8;
+  --samea:#1F5FBF; --samea-bg:#DCE9FB;
+  --sameb:#7A3FB8; --sameb-bg:#ECDFF9;
+  --mm:#0E7E74; --mm-bg:#D6F1EE;
+  --abs:#8A93A6; --abs-bg:#EDEFF3;
+  --mal:#C03A33; --mal-bg:#F9DEDC;
+  --off:#475066; --off-bg:#DDE1E9;
+  --r:10px; font-size:15px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:"Barlow Semi Condensed","Segoe UI",system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--txt)}
+button{font:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font:inherit}
+
+header{background:var(--ink);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:60}
+header .logo{display:flex;align-items:baseline;gap:6px;font-weight:700;font-size:1.2rem;letter-spacing:.02em}
+header .logo b{color:var(--amber)}
+header .logo small{font-weight:400;color:#9FB0CC;font-size:.72rem;letter-spacing:.07em;text-transform:uppercase}
+header .grow{flex:1}
+.rolebadge{display:inline-flex;align-items:center;gap:6px;background:var(--ink-2);border-radius:20px;padding:5px 12px;font-size:.78rem;font-weight:600}
+.rolebadge .dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}
+.rolebadge.team .dot{background:#6FA8FF}
+.monthpick{display:flex;align-items:center;gap:6px;background:var(--ink-2);border-radius:8px;padding:4px 8px}
+.monthpick button{color:#fff;font-size:1.1rem;padding:2px 8px;border-radius:6px}
+.monthpick button:hover{background:rgba(255,255,255,.12)}
+.monthpick span{font-weight:600;min-width:120px;text-align:center;font-size:.92rem}
+.hbtn{color:#fff;background:var(--ink-2);border-radius:8px;padding:7px 12px;font-size:.8rem;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.hbtn:hover{background:#2C3F63}
+.savestate{font-size:.72rem;color:#9FB0CC;min-width:80px;text-align:right}
+.teamonly{display:none!important}body.is-team .teamonly{display:inline-flex!important}
+
+nav{display:flex;gap:2px;background:var(--ink);padding:0 10px;overflow-x:auto;position:sticky;top:54px;z-index:55}
+nav button{color:#B9C4D9;padding:10px 16px;font-weight:600;font-size:.9rem;border-bottom:3px solid transparent;white-space:nowrap;position:relative}
+nav button.on{color:#fff;border-color:var(--amber)}
+nav button .badge{position:absolute;top:5px;right:6px;background:var(--bad);color:#fff;font-size:.6rem;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px}
+nav button.adminonly{display:none}
+body.is-admin nav button.adminonly{display:block}
+main{padding:14px}
+.view{display:none}.view.on{display:block}
+
+.planhead{font-size:1.15rem;font-weight:700;margin-bottom:10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.planhead small{font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.toolbar input[type=search]{padding:8px 12px;border:1px solid var(--line-2);border-radius:8px;min-width:160px;flex:1;max-width:260px}
+.toolbar select{padding:8px 10px;border:1px solid var(--line-2);border-radius:8px;background:#fff}
+.btn{background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;font-weight:600;font-size:.85rem;display:inline-flex;align-items:center;gap:6px}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line-2)}
+.btn.warn{background:var(--bad)}
+.btn.amber{background:var(--amber);color:var(--ink)}
+.btn.ok{background:var(--ok)}
+.btn.sm{padding:5px 10px;font-size:.78rem}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.adminonly{display:none!important}
+body.is-admin .adminonly{display:inline-flex!important}
+body.is-admin .adminonly.block{display:block!important}
+.teamonly{display:none!important}
+body.is-team .teamonly{display:inline-flex!important}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+.seg button{padding:8px 14px;font-weight:600;font-size:.82rem;background:#fff;color:var(--ink)}
+.seg button.on{background:var(--ink);color:#fff}
+.weeknav{display:inline-flex;align-items:center;gap:4px}
+.weeknav button{padding:6px 10px;border:1px solid var(--line-2);border-radius:8px;background:#fff;font-weight:700}
+.weeknav span{font-weight:600;font-size:.85rem;min-width:170px;text-align:center}
+
+.banner{background:var(--warn-soft);border:1px solid var(--warn);color:#7a4a00;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.banner b{color:var(--warn)}.banner .grow{flex:1}
+
+.gridwrap{overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r);max-height:calc(100vh - 250px)}
+table.grid{border-collapse:separate;border-spacing:0;font-size:.8rem;white-space:nowrap}
+table.grid th,table.grid td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0}
+table.grid thead th{position:sticky;top:0;background:var(--card);z-index:20;vertical-align:bottom}
+table.grid thead tr.weeks th{font-size:.68rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px;background:#EEF1F6;text-align:left}
+th.day{min-width:52px;text-align:center;padding:4px 2px 2px}
+th.day .dow{display:block;font-size:.62rem;color:var(--muted);text-transform:uppercase;font-weight:600}
+th.day .num{display:block;font-size:.95rem;font-weight:700}
+th.day .heat{display:block;height:5px;border-radius:3px;margin:3px 4px 0;background:var(--line)}
+th.day.wend{background:#F2F4F8}
+th.day.today .num{color:var(--amber)}
+.stick{position:sticky;background:var(--card);z-index:15}
+thead .stick{z-index:25}
+th.stick,td.stick{border-right:1px solid var(--line-2)}
+.c-n{left:0;min-width:34px;text-align:center;color:var(--muted)}
+.c-name{left:34px;min-width:150px;max-width:210px;overflow:hidden;text-overflow:ellipsis;padding:4px 8px!important;font-weight:600}
+.c-name small{display:block;font-weight:400;color:var(--muted);font-size:.68rem}
+td.cell{min-width:52px;height:34px;text-align:center;cursor:pointer;position:relative}
+td.cell .cellEdit{display:flex;align-items:center;gap:1px;padding:0 1px}
+td.cell input.cellInp{width:100%;min-width:0;border:2px solid var(--amber);border-radius:4px;text-align:center;font-size:.72rem;font-weight:700;padding:2px 1px;background:#fff}
+td.cell .cellPick{flex:0 0 auto;font-size:.72rem;color:var(--muted);padding:0 1px;line-height:1}
+td.cell:hover{outline:2px solid var(--amber);outline-offset:-2px;z-index:5}
+td.cell.wend{background:#F7F8FB}
+td.cell.viol{box-shadow:inset 0 0 0 2px var(--bad)}
+.chip{display:inline-block;min-width:40px;padding:2px 4px;border-radius:5px;font-size:.7rem;font-weight:700;line-height:1.3}
+td.c-tot{text-align:center;font-weight:700;background:#F2F4F8;min-width:44px}
+td.c-ctr{text-align:center;font-size:.7rem;color:var(--muted);min-width:70px;padding:0 6px!important}
+tr.foot td{background:#EEF1F6;font-weight:700;text-align:center;font-size:.72rem;height:26px}
+tr.foot td.lbl{text-align:right;padding:0 8px!important;color:var(--muted);font-weight:600;letter-spacing:.04em;font-size:.66rem;text-transform:uppercase}
+tr.foot td.neg{color:var(--bad)} tr.foot td.pos{color:var(--ok)}
+tr.empty td{padding:20px;text-align:center;color:var(--muted);font-style:italic}
+tbody tr:hover td.stick{background:#FBFCFE}
+
+.overlay{position:fixed;inset:0;background:rgba(22,35,59,.45);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.overlay.on{display:flex}
+.sheet{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:88vh;display:flex;flex-direction:column;animation:up .18s ease}
+@keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+.sheet .shead{padding:14px 16px 8px;border-bottom:1px solid var(--line)}
+.sheet .shead h3{font-size:1rem}.sheet .shead p{font-size:.78rem;color:var(--muted)}
+.sheet .sbody{overflow:auto;padding:12px 16px 20px}
+.codegrp{margin-bottom:12px}
+.codegrp h4{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.codegrid{display:flex;flex-wrap:wrap;gap:6px}
+.codegrid button{padding:7px 12px;border-radius:8px;font-weight:700;font-size:.8rem;border:1px solid var(--line-2)}
+.codegrid button.sel{outline:3px solid var(--amber)}
+.sheet .sfoot{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px}
+.sheet .sfoot .btn{flex:1}
+@media(min-width:640px){.overlay{align-items:center}.sheet{border-radius:16px}}
+
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select,.field textarea{padding:9px 11px;border:1px solid var(--line-2);border-radius:8px}
+.field textarea{min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem}
+.field .chk{display:flex;align-items:center;gap:8px;text-transform:none;font-size:.85rem;color:var(--txt);font-weight:500}
+.field2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.daypick{display:flex;gap:5px;flex-wrap:wrap}
+.daypick button{padding:8px 0;border-radius:8px;border:1px solid var(--line-2);font-weight:700;font-size:.78rem;flex:1;min-width:42px}
+.daypick button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chipsel{display:flex;flex-wrap:wrap;gap:5px}
+.chipsel button{padding:5px 9px;border-radius:14px;border:1px solid var(--line-2);font-size:.72rem;font-weight:700;color:var(--muted);background:#fff}
+.chipsel button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.pilllist{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.pill{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line-2);border-radius:20px;padding:6px 8px 6px 14px;font-weight:600}
+.pill button{color:var(--bad);font-weight:700;padding:0 4px}
+
+.covgrid{overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+table.cov{border-collapse:collapse;font-size:.78rem;white-space:nowrap;width:100%}
+table.cov th,table.cov td{border:1px solid var(--line);padding:4px 6px;text-align:center;min-width:38px}
+table.cov th{background:#EEF1F6;position:sticky;top:0}
+table.cov td.svc{text-align:left;font-weight:700;position:sticky;left:0;background:#fff;min-width:150px;z-index:3}
+table.cov tr.sec td{background:var(--ink);color:#fff;font-weight:700;text-align:left;letter-spacing:.05em;font-size:.72rem;text-transform:uppercase}
+table.cov td.d-neg{background:var(--bad-soft);color:var(--bad);font-weight:700}
+table.cov td.d-pos{background:var(--ok-soft);color:var(--ok);font-weight:700}
+table.cov td.d-zero{color:var(--muted)}
+table.cov input{width:40px;border:none;text-align:center;background:var(--amber-soft);border-radius:4px;padding:2px;font-size:.78rem}
+.rowmode{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.rowmode button{padding:6px 14px;border-radius:20px;border:1px solid var(--line-2);background:#fff;font-weight:600;font-size:.8rem}
+.rowmode button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.dcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
+.dcard.pending{border-color:var(--warn);background:#FFFDF8}
+.dcard .av{width:42px;height:42px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.dcard .nm{font-weight:700}
+.dcard .meta{font-size:.75rem;color:var(--muted);line-height:1.5}
+.dcard .tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.tag{font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--abs-bg);color:var(--abs)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag.bad{background:var(--bad-soft);color:var(--bad)}.tag.pend{background:var(--warn-soft);color:var(--warn)}.tag.fil{background:var(--samea-bg);color:var(--samea)}
+.dcard .acts{margin-left:auto;display:flex;flex-direction:column;gap:4px}
+.dcard .acts button{padding:6px 8px;border-radius:6px;border:1px solid var(--line);font-size:.78rem;white-space:nowrap}
+.dcard .acts button.ap{background:var(--ok);color:#fff;border-color:var(--ok)}
+.dcard .acts button.rj{background:var(--bad);color:#fff;border-color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.kpi b{font-size:1.5rem;display:block}
+.kpi span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+.legtbl{width:100%;max-width:760px;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.legtbl td,.legtbl th{padding:8px 12px;border-bottom:1px solid var(--line);font-size:.85rem;text-align:left;vertical-align:middle}
+.legtbl th{background:#EEF1F6;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.note{font-size:.78rem;color:var(--muted);margin:8px 0;max-width:780px;line-height:1.55}
+.formrow{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:flex-end}
+.formrow label{display:flex;flex-direction:column;gap:3px;font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.formrow input,.formrow select{padding:8px 10px;border:1px solid var(--line-2);border-radius:8px;min-width:120px;text-transform:none}
+.subtabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.subtabs button{padding:8px 16px;border-radius:20px;border:1px solid var(--line-2);background:#fff;font-weight:600;font-size:.85rem}
+.subtabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.cfgsec{display:none}.cfgsec.on{display:block}
+.fcard{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.fcard h4{font-size:.85rem;margin-bottom:4px}.fcard p{font-size:.74rem;color:var(--muted);margin-bottom:8px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:24px;font-size:.85rem;font-weight:600;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%;text-align:center}
+.toast.on{opacity:1}
+.anwrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.anwrap.full{grid-template-columns:1fr}
+.chartcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.chartcard h3{font-size:.95rem;margin-bottom:2px}
+.chartcard p.sub{font-size:.74rem;color:var(--muted);margin-bottom:10px}
+.chartcard svg{width:100%;height:auto;display:block}
+.chartcard.span2{grid-column:1/-1}
+.donutleg{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.donutleg span{display:inline-flex;align-items:center;gap:5px;font-size:.74rem;color:var(--txt)}
+.donutleg i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.legq-grp{margin-bottom:12px}.legq-grp h4{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.legq-grid{display:flex;flex-wrap:wrap;gap:6px}
+.legq-grid button{padding:6px 10px;border-radius:8px;font-weight:700;font-size:.78rem;border:1px solid var(--line-2);display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px}
+.legq-grid button small{font-weight:400;font-size:.64rem;opacity:.8}
+@media(max-width:600px){:root{font-size:14px}th.day{min-width:46px}td.cell{min-width:46px}.c-name{min-width:120px;max-width:140px}.field2{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 
-<!-- ── Global UI chrome ── -->
-<div id="toast-container"></div>
-<div id="autosaveIndicator"><span id="autosaveIcon">⏳</span><span id="autosaveText">Salvataggio…</span></div>
-<div id="undoBar">
-  <button class="undo-btn" id="undoBtn" onclick="spaDoUndo()" title="Ctrl+Z" disabled>↩ Annulla</button>
-  <button class="undo-btn" id="redoBtn" onclick="spaDoRedo()" title="Ctrl+Shift+Z" disabled>↪ Ripeti</button>
-</div>
-<div id="kbdHint"></div>
+<header>
+  <a class="hbtn" href="dashboard.html" style="text-decoration:none">📊 Dashboard</a>
+  <div class="logo"><b>Gestione Turni</b> Global One <small>S.p.A.</small></div>
+  <div class="grow"></div>
+  <span class="rolebadge" id="roleBadge"><span class="dot"></span><span id="roleTxt">Team</span></span>
+  <button class="hbtn teamonly" id="filChip" onclick="openFilialePick()">📍 <span id="filChipTxt">—</span> ▾</button>
+  <div class="monthpick"><button onclick="shiftMonth(-1)">‹</button><span id="monthLabel"></span><button onclick="shiftMonth(1)">›</button></div>
+  <button class="hbtn" id="loginBtn" onclick="toggleLogin()">Accedi</button>
+  <button class="hbtn" onclick="saveAll(true)">💾 Salva</button>
+  <span class="savestate" id="saveState"></span>
+</header>
 
-<!-- Context menu (scheduler cells) -->
-<div id="ctxMenu">
-  <div class="ctx-item" onclick="boardCtxAction('edit')">✏️ Modifica</div>
-  <div class="ctx-item" onclick="boardCtxAction('copy')">📋 Copia</div>
-  <div id="ctx-paste" class="ctx-item" onclick="boardCtxAction('paste')" style="display:none">📌 Incolla</div>
-  <div class="ctx-item" onclick="boardCtxAction('duplicate')">⊕ Duplica settimana</div>
-  <div class="ctx-sep"></div>
-  <div class="ctx-item danger" onclick="boardCtxAction('delete')">🗑 Svuota</div>
-</div>
+<nav>
+  <button class="on" data-v="plan" onclick="setView('plan')">Pianificazione</button>
+  <button data-v="cov" onclick="setView('cov')">Copertura &amp; Delta</button>
+  <button data-v="das" onclick="setView('das')">Anagrafica DAS</button>
+  <button data-v="contr" onclick="setView('contr')">Contratti &amp; Scadenze</button>
+  <button class="adminonly" data-v="appr" onclick="setView('appr')">Approvazioni<span class="badge" id="apprBadge" style="display:none">0</span></button>
+  <button class="adminonly" data-v="cfg" onclick="setView('cfg')">⚙ Configurazione</button>
+  <button class="adminonly" data-v="an" onclick="setView('an')">📊 Analisi</button>
+  <button class="adminonly" data-v="log" onclick="setView('log')">📝 Registro</button>
+  <button data-v="leg" onclick="setView('leg')">Legenda</button>
+  <button class="adminonly" data-v="data" onclick="setView('data')">Dati &amp; Sync</button>
+</nav>
 
-<!-- ════════════════════════════════════════════
-     APP SHELL — one layout for everything
-     ════════════════════════════════════════════ -->
-<div class="app-shell">
+<main>
 
-  <!-- ── Sidebar (app-nav) ── -->
-  <nav class="app-nav" id="appNav">
-    <div class="nav-brand">
-      <div class="nav-brand-icon">🚚</div>
-      <div>
-        <div class="nav-brand-name">TurniDSP</div>
-        <div class="nav-brand-sub">Global One S.p.A.</div>
-      </div>
+  <section class="view on" id="v-plan">
+    <h1 class="planhead">Turni — Global One S.p.A. <small id="planScope"></small></h1>
+    <div class="banner adminonly block" id="autoBanner" style="display:none"></div>
+    <div class="banner" id="violBanner" style="display:none;background:var(--bad-soft);border-color:var(--bad);color:#7a1c17"></div>
+    <div class="toolbar">
+      <div class="seg" id="planModeSeg"><button class="on" data-pm="week" onclick="setPlanMode('week')">Settimana</button><button data-pm="month" onclick="setPlanMode('month')">Mese</button></div>
+      <div class="weeknav" id="weekNav"></div>
+      <input type="search" id="q" placeholder="Cerca DAS…" oninput="renderGrid()">
+      <select id="fFiliale" onchange="renderGrid()"></select>
+      <select id="fService" onchange="renderGrid()"></select>
+      <select id="fStato" onchange="renderGrid()" title="Filtra per stato del giorno di riferimento"><option value="">Tutti gli stati</option><option value="turno">In turno</option><option value="riposo">Riposo (OFF)</option><option value="assente">Assenti</option><option value="dispo">Disponibili (vuoto)</option></select>
+      <button class="btn amber" onclick="openAuto()">⚙ Genera turni</button>
+      <button class="btn ghost" onclick="openImport()">⬆ Importa DAS</button>
+      <button class="btn ghost" onclick="openExportWeek()">📤 Esporta settimana</button>
+      <button class="btn ghost" onclick="openTurnPdf()">🖨️ Turnazione PDF</button>
+      <button class="btn ghost" id="fdToggle" onclick="toggleFcDelta()">＋ Forecast/Delta</button>
+      <button class="btn ghost adminonly" onclick="openLegendQuick()">🎨 Legenda</button>
+      <button class="btn ghost teamonly" onclick="openFilDetail(teamFiliale)">🅿️ Parcheggi filiale</button>
+    </div>
+    <p class="note" id="gridHint" style="margin-top:0">Clicca una cella e scrivi il codice (es. <b>off</b>, <b>samea</b>, <b>x</b>) — Invio scende, Tab va a destra, Esc annulla. Premi ▾ o doppio clic per scegliere dalla lista.</p>
+    <div class="gridwrap"><table class="grid" id="grid"></table></div>
+  </section>
+
+  <section class="view" id="v-cov">
+    <div class="kpis" id="covKpis"></div>
+    <div class="rowmode" id="covMode">
+      <button class="on" data-m="delta" onclick="setCovMode('delta')">Delta (turni − forecast)</button>
+      <button data-m="harmony" onclick="setCovMode('harmony')">Harmony (in turno)</button>
+      <button data-m="forecast" onclick="setCovMode('forecast')">Forecast</button>
+      <select id="covFil" class="adminonly" style="padding:6px 10px;border:1px solid var(--line-2);border-radius:8px;background:#fff" onchange="onCovFil()"></select>
+      <button class="btn ghost" onclick="openHarmony()">🔗 Apri Harmony</button>
+      <button class="btn ghost adminonly" onclick="setHarmonyUrl()">⚙ URL Harmony</button>
+    </div>
+    <div class="seg" id="covRange" style="margin-bottom:10px"><button class="on" data-cr="week" onclick="setCovRange('week')">Per settimana</button><button data-cr="month" onclick="setCovRange('month')">Tutto il mese</button></div>
+    <div class="weeknav" id="covWeekNav" style="margin-bottom:10px"></div>
+    <div class="covgrid"><table class="cov" id="covTbl"></table></div>
+    <p class="note">Logica come da file Excel, configurabile in ⚙ Configurazione → Formule. I team vedono la copertura della propria filiale; l'Admin vede tutte. Delta = Harmony − Forecast.</p>
+  </section>
+
+  <section class="view" id="v-das">
+    <div class="kpis" id="dasKpis"></div>
+    <div class="toolbar"><input type="search" id="qDas" placeholder="Filtra DAS…" oninput="renderDas()"><button class="btn amber" onclick="openDriver(null)">+ Aggiungi DAS</button><button class="btn ghost" onclick="openImport()">⬆ Importa</button><button class="btn ghost" onclick="exportDasCsv()">⬇ Esporta CSV</button></div>
+    <div class="cards" id="dasList"></div>
+  </section>
+
+  <section class="view" id="v-contr">
+    <div class="kpis" id="contrKpis"></div>
+    <p class="note">Scadenze contratti a tempo determinato. Verde oltre 60 gg · giallo entro 60 gg · rosso scaduto o entro 15 gg.</p>
+    <table class="legtbl" id="contrTbl" style="max-width:100%"></table>
+  </section>
+
+  <section class="view" id="v-appr">
+    <h3 style="margin-bottom:6px">DAS in attesa di approvazione</h3>
+    <p class="note">Nuovi DAS proposti dai team. Approva per inserirli nel roster della loro filiale, oppure rifiuta.</p>
+    <div class="cards" id="apprList"></div>
+  </section>
+
+  <section class="view" id="v-cfg">
+    <div class="subtabs">
+      <button class="on" data-c="filiali" onclick="setCfg('filiali')">Filiali</button>
+      <button data-c="users" onclick="setCfg('users')">Account team</button>
+      <button data-c="svcs" onclick="setCfg('svcs')">Servizi &amp; Forecast</button>
+      <button data-c="contracts" onclick="setCfg('contracts')">Contratti</button>
+      <button data-c="codes" onclick="setCfg('codes')">Codici turno &amp; assenza</button>
+      <button data-c="formulas" onclick="setCfg('formulas')">Formule</button>
     </div>
 
-    <div class="nav-user">
-      <div class="nav-user-avatar" id="navAvatar">—</div>
-      <div>
-        <div class="nav-user-name" id="navUname">—</div>
-        <div class="nav-user-role" id="navRole">—</div>
-      </div>
+    <div class="cfgsec on" id="cfg-filiali">
+      <div class="formrow"><label>Nuova filiale<input id="newFil" placeholder="es. DLO2"></label><button class="btn amber" onclick="addFiliale()">+ Aggiungi filiale</button></div>
+      <div class="pilllist" id="filList"></div>
+      <p class="note">Ogni filiale ha i suoi DAS. I team member, scegliendo la propria filiale in alto, gestiscono solo quella. L'Admin gestisce tutte le filiali.</p>
     </div>
 
-    <div class="nav-section-label">Piattaforma</div>
-    <button class="nav-item active" data-section="scheduler" onclick="navigate('scheduler')">
-      <span class="nav-item-icon">🗓</span>Workspace
-    </button>
-    <button class="nav-item" data-section="employees" onclick="navigate('employees')">
-      <span class="nav-item-icon">👥</span>Dipendenti
-    </button>
-    <button class="nav-item" data-section="reports" onclick="navigate('reports')">
-      <span class="nav-item-icon">📈</span>Report &amp; Analytics
-    </button>
-
-    <div class="nav-section-label adminonly">Admin</div>
-    <button class="nav-item adminonly" data-section="settings" onclick="navigate('settings')">
-      <span class="nav-item-icon">⚙</span>Impostazioni
-    </button>
-
-    <!-- Scheduler sub-nav (visible only when scheduler is active) -->
-    <div id="sched-subnav" style="display:none">
-      <div class="nav-section-label">Workspace</div>
-      <button class="nav-item" data-v="overview" onclick="scrollToOverview()"><span class="nav-item-icon">📊</span>Riepilogo</button>
-      <button class="nav-item" data-v="plan"  onclick="schedSetView('plan')" ><span class="nav-item-icon">📅</span>Pianificazione</button>
-      <button class="nav-item" data-v="cov"   onclick="schedSetView('cov')" ><span class="nav-item-icon">📊</span>Copertura</button>
-      <button class="nav-item" data-v="das"   onclick="schedSetView('das')" ><span class="nav-item-icon">👤</span>Anagrafica DAS</button>
-      <button class="nav-item" data-v="contr" onclick="schedSetView('contr')"><span class="nav-item-icon">📋</span>Contratti</button>
-      <button class="nav-item" data-v="leg"   onclick="schedSetView('leg')" ><span class="nav-item-icon">📖</span>Legenda</button>
-      <button class="nav-item adminonly" data-v="an"  onclick="schedSetView('an')"  ><span class="nav-item-icon">📉</span>Analisi</button>
-      <button class="nav-item adminonly" data-v="cfg" onclick="schedSetView('cfg')" ><span class="nav-item-icon">🔧</span>Config</button>
-      <button class="nav-item adminonly" data-v="log" onclick="schedSetView('log')" ><span class="nav-item-icon">📝</span>Registro</button>
-      <button class="nav-item adminonly" data-v="data" onclick="schedSetView('data')"><span class="nav-item-icon">🗄</span>Dati &amp; Sync</button>
+    <div class="cfgsec" id="cfg-users">
+      <div class="formrow" style="align-items:flex-end">
+        <label>Username<input id="uName" placeholder="es. mattia" autocapitalize="off"></label>
+        <label>PIN<input id="uPin" type="text" placeholder="es. 2580"></label>
+        <label>Filiale<select id="uFil"></select></label>
+        <button class="btn amber" onclick="addUser()">+ Crea account</button>
+      </div>
+      <table class="legtbl" id="usersTbl" style="max-width:100%"></table>
+      <p class="note">L'Admin crea gli account dei team member e li associa a una filiale. Al login il team member può lavorare solo su quella filiale (non può cambiarla). <b>Nota di sicurezza:</b> username e PIN sono salvati nel browser; questa separazione è organizzativa, non una protezione robusta. Per un controllo accessi reale serve l'autenticazione lato server.</p>
     </div>
 
-    <div class="nav-footer">
-      <div class="nav-sync-chip" id="navSync">🔵 Connesso</div>
-      <div style="padding:4px 8px 2px">
-        <span class="save-pill" id="saveState"></span>
-      </div>
-      <button class="nav-logout" onclick="doLogout()"><span>↪</span>Esci</button>
+    <div class="cfgsec" id="cfg-svcs">
+      <div class="toolbar"><button class="btn amber" onclick="openSvc(null)">+ Nuovo servizio (forecast)</button></div>
+      <table class="legtbl" id="svcsTbl" style="max-width:100%"></table>
+      <p class="note">Ogni servizio è una riga di forecast in Copertura. Scegli i codici conteggiati (Harmony), il tipo di forecast (editabile o derivato MIN) e le <b>filiali</b> a cui assegnarlo: il team di quella filiale vedrà e gestirà solo i servizi assegnati. Nessuna filiale selezionata = valido per tutte.</p>
+      <h3 style="margin:18px 0 8px">Tipi di servizio dei DAS</h3>
+      <div class="formrow"><label>Nome<input id="stName" placeholder="es. NEXT DAY"></label><label>Codice predefinito<select id="stCode"></select></label><label>Orario<input id="stConv" placeholder="es. 09:00" style="min-width:80px"></label><label>Parcheggio (Luogo Convocazione)<input id="stPark" list="parkList" placeholder="es. Parcheggio Via Salomone 1" style="min-width:160px"></label><button class="btn amber" onclick="addStype()">+ Aggiungi tipo</button></div>
+      <div class="pilllist" id="stypeList"></div>
+      <datalist id="parkList"></datalist>
+      <p class="note">Tipi di servizio assegnabili ai DAS (usati nell'anagrafica e nell'auto-generazione, con il relativo codice predefinito).</p>
     </div>
-  </nav>
 
-  <!-- ── Content area ── -->
-  <div class="app-content">
+    <div class="cfgsec" id="cfg-contracts">
+      <div class="toolbar"><button class="btn amber" onclick="openContract(null)">+ Nuovo contratto</button></div>
+      <table class="legtbl" id="cfgContrTbl" style="max-width:100%"></table>
+    </div>
 
-    <!-- ── Shared top header ── -->
-    <header class="app-header">
-      <div>
-        <span class="app-header-title" id="pageTitle">Dashboard</span>
-        <span class="app-header-sub"   id="pageSubtitle"></span>
-      </div>
-      <div class="app-header-spacer"></div>
+    <div class="cfgsec" id="cfg-codes">
+      <div class="toolbar"><button class="btn amber" onclick="openCode(null)">+ Nuovo codice</button></div>
+      <table class="legtbl" id="cfgCodesTbl" style="max-width:100%"></table>
+    </div>
 
-      <!-- Global search -->
-      <div class="header-search">
-        <input class="header-search-input" id="globalSearch"
-               placeholder="Cerca dipendente, ID…" autocomplete="off"
-               oninput="debouncedGlobalSearch(this.value)"
-               onblur="setTimeout(()=>{document.getElementById('searchDropdown').style.display='none'},200)">
-        <div id="searchDropdown" class="header-search-dropdown"></div>
-      </div>
+    <div class="cfgsec" id="cfg-formulas">
+      <p class="note">Codici conteggiati in ogni riga di riepilogo e in ogni service Harmony. Il Delta è Harmony − Forecast. I forecast derivati (MIN) restano automatici.</p>
+      
+      <h3 style="margin:6px 0 8px">Righe di riepilogo (piè di griglia)</h3>
+      <div id="cfgCounters"></div>
+      <h3 style="margin:16px 0 8px">Formule personalizzate</h3>
+      <div class="formrow"><label>Nome nuova formula<input id="ccName" placeholder="es. Cargo bike totali"></label><button class="btn amber" onclick="addCustomCounter()">+ Aggiungi formula</button></div>
+      <p class="note" style="margin-top:0">Una formula personalizzata conta i codici che selezioni e appare come riga in fondo alla griglia di Pianificazione.</p>
+      <div id="cfgCustom"></div>
+      <h3 style="margin:16px 0 8px">Harmony — codici per service</h3>
+      <div id="cfgServices"></div>
+    </div>
+  </section>
 
-      <!-- Notification bell -->
-      <div class="notif-wrap">
-        <button class="notif-btn" onclick="toggleNotifPanel()" title="Notifiche">
-          🔔<span class="notif-badge" id="notifBadge">0</span>
-        </button>
-        <div class="notif-panel" id="notifPanel">
-          <div class="notif-panel-head">
-            <span>Notifiche</span>
-            <button class="header-btn sm" onclick="markAllRead()" style="font-size:.7rem">Segna lette</button>
-          </div>
-          <div id="notifList"></div>
-        </div>
-      </div>
+  <section class="view" id="v-log">
+    <div class="toolbar">
+      <input type="search" id="qLog" placeholder="Filtra registro (utente, azione)…" oninput="renderLog()">
+      <button class="btn ghost" onclick="exportLog()">⬇ Esporta CSV</button>
+      <button class="btn warn" onclick="clearLog()">🗑 Svuota registro</button>
+    </div>
+    <p class="note">Chi ha modificato cosa e quando (mese corrente). Registra DAS, turni, forecast, approvazioni, configurazione e accessi.</p>
+    <table class="legtbl" id="logTbl" style="max-width:100%"></table>
+  </section>
 
-      <!-- Workspace header controls — always visible, one workspace, no toggling -->
-      <div id="workspaceHeader" style="display:flex;align-items:center;gap:8px">
-        <span class="role-badge"><span class="role-dot"></span><span id="roleTxt">Team</span></span>
-        <button class="branch-chip teamonly" id="filChip" onclick="openFilialePick()">
-          📍 <span id="filChipTxt">—</span> ▾
-        </button>
-        <select id="branchSel" class="sel" style="font-size:.78rem">
-          <option value="">Tutte le filiali</option>
-        </select>
-        <button class="nav-arrow" onclick="shiftMonth(-1)">‹</button>
-        <span class="period-label" id="monthLabel">—</span>
-        <button class="nav-arrow" onclick="shiftMonth(1)">›</button>
-        <button class="header-btn primary" onclick="refreshAll()">↻ Aggiorna</button>
-      </div>
+  <section class="view" id="v-an">
+    <div class="toolbar">
+      <select id="anFiliale" onchange="renderAnalysis()"></select>
+      <button class="btn ghost" onclick="exportAnalysis()">⬇ Esporta analisi (CSV)</button>
+      <button class="btn ghost" onclick="exportOvertime()">⬇ Straordinari (CSV)</button>
+    </div>
+    <div class="kpis" id="anKpis"></div>
+    <div class="anwrap" id="anCharts"></div>
+  </section>
 
-      <!-- Login button (scheduler legacy) -->
-      <button class="header-btn" id="headerLoginBtn" onclick="toggleLogin()" style="display:none">Accedi</button>
-    </header>
+  <section class="view" id="v-leg">
+    <h3 style="margin-bottom:8px">Codici turno e assenza</h3>
+    <table class="legtbl" id="legTbl"></table>
+    <h3 style="margin:16px 0 8px">Contratti</h3>
+    <table class="legtbl" id="ctrTbl"></table>
+  </section>
 
-    <!-- ════════════════════════════════════
-         MAIN BODY — all sections live here
-         ════════════════════════════════════ -->
-    <div class="app-body">
+  <section class="view" id="v-data">
+    <h3 style="margin-bottom:8px">Salvataggio e sincronizzazione</h3>
+    <p class="note">Dati in localStorage (un archivio per mese). La configurazione (filiali, contratti, codici, formule) è condivisa tra i mesi. Esporta/importa JSON o usa <code>api_turni.php</code>.</p>
+    <div class="toolbar">
+      <button class="btn" onclick="exportJson()">⬇ Esporta JSON mese</button>
+      <button class="btn ghost" onclick="document.getElementById('impFile').click()">⬆ Importa JSON</button>
+      <input type="file" id="impFile" accept=".json" style="display:none" onchange="importJson(event)">
+      <button class="btn warn" onclick="resetMonth()">🗑 Azzera turni mese</button>
+    </div>
+    <div class="formrow" style="margin-top:14px">
+      <label style="flex:1;min-width:240px">Endpoint API<input id="apiUrl" placeholder="https://tuodominio.it/api_turni.php"></label>
+      <button class="btn" onclick="syncPush()">↑ Invia</button><button class="btn ghost" onclick="syncPull()">↓ Scarica</button>
+    </div>
+    <div class="formrow" style="margin-top:8px"><label class="chk" style="flex-direction:row;align-items:center;text-transform:none"><input type="checkbox" id="autoGenChk" onchange="toggleAutoGen()"> Genera automaticamente i turni all'apertura di un mese vuoto (in base ai giorni di contratto)</label></div>
+    <div class="formrow" style="margin-top:8px"><label>PIN Admin<input id="pinNew" type="password" placeholder="nuovo PIN"></label><button class="btn" onclick="changePin()">Aggiorna PIN</button></div>
+    <p class="note" id="syncMsg"></p>
+  </section>
 
-      <!-- ══ SCHEDULER WORKSPACE ═════════════
-           Dashboard is now the top section of this single workspace,
-           not a separate page. Everything below shares one scroll
-           container, one state, one header, one sidebar. ══════════ -->
-      <div class="spa-section active" id="sec-scheduler">
+</main>
 
-        <!-- ── Workspace overview strip: KPIs · Alerts · Activity ──
-             Collapsible. Lives above the toolbar so it's always the
-             first thing a manager sees when opening the workspace,
-             but never competes with the board for space. ──────── -->
-        <div id="workspaceOverview" class="page-pad" style="padding-bottom:0">
-          <div class="page-head" style="margin-bottom:14px">
-            <div>
-              <div class="page-title" id="greetTitle">Workspace</div>
-              <div class="page-sub"   id="greetSub"></div>
-            </div>
-            <div class="flex items-center gap-2">
-              <input type="date" id="kpiDate" class="inp" style="width:136px;font-size:.78rem;padding:6px 9px">
-              <span id="dspDateLabel" class="text-sm text-muted"></span>
-              <button class="header-btn sm" id="overviewToggle" onclick="toggleOverview()" title="Comprimi/espandi riepilogo">▾ Riepilogo</button>
-            </div>
-          </div>
+<!-- Cell picker -->
+<div class="overlay" id="picker"><div class="sheet"><div class="shead"><h3 id="pkTitle"></h3><p id="pkSub"></p></div><div class="sbody" id="pkBody"></div><div class="sfoot"><button class="btn ghost" onclick="setCell('')">Svuota</button><button class="btn warn" onclick="closeAll()">Chiudi</button></div></div></div>
 
-          <div id="overviewBody">
-            <!-- KPI row -->
-            <div class="kpi-grid" id="kpiGrid">
-              <div class="kpi-card pri skel" style="height:120px"></div>
-              <div class="kpi-card ok  skel fade-in-1" style="height:120px"></div>
-              <div class="kpi-card bad skel fade-in-2" style="height:120px"></div>
-              <div class="kpi-card warn skel fade-in-3" style="height:120px"></div>
-            </div>
-
-            <!-- Alert Center: forecast delta / expiring contracts / attendance / recent activity -->
-            <div class="overview-alert-row">
-              <div class="card card-pad">
-                <div class="section-head">
-                  <span class="section-title">🎯 Forecast vs Pianificato</span>
-                  <span class="badge badge-muted" id="fcBadge">—</span>
-                </div>
-                <div id="fcContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
-              </div>
-              <div class="card card-pad">
-                <div class="section-head"><span class="section-title">📋 Contratti in scadenza</span></div>
-                <div id="expiryContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
-              </div>
-              <div class="card card-pad">
-                <div class="section-head"><span class="section-title">👁 Presenza oggi</span></div>
-                <div id="attContent"><div class="skel" style="height:80px;border-radius:8px"></div></div>
-              </div>
-              <div class="card card-pad">
-                <div class="section-head"><span class="section-title">⚡ Attività recente</span></div>
-                <div id="activityList" class="feed-list"><div class="skel" style="height:80px;border-radius:8px"></div></div>
-              </div>
-            </div>
-
-            <!-- DSP operations table — clicking a row jumps straight into the board, filtered -->
-            <div class="card card-pad mb-4">
-              <div class="section-head">
-                <span class="section-title">🚚 Operatività per filiale</span>
-                <span class="text-xs text-muted">Click su una riga per filtrare il planner</span>
-              </div>
-              <div style="overflow-x:auto">
-                <table class="tbl" id="dspTbl">
-                  <thead><tr><th>Filiale</th><th>Driver totali</th><th>In turno</th><th>Copertura</th></tr></thead>
-                  <tbody><tr><td colspan="4"><div class="skel" style="height:22px;border-radius:6px"></div></td></tr></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Expiry / alert list — clicking a row focuses that employee in the board -->
-            <div class="card card-pad mb-4">
-              <div class="section-head"><span class="section-title">⏰ Scadenze prossime (60 gg)</span></div>
-              <div style="overflow-x:auto">
-                <table class="tbl" id="alertsTbl">
-                  <thead><tr><th>Dipendente</th><th>Tipo</th><th>Scadenza</th><th>Giorni</th><th>Stato</th></tr></thead>
-                  <tbody><tr><td colspan="5"><div class="skel" style="height:22px;border-radius:6px"></div></td></tr></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div><!-- /workspaceOverview -->
-
-        <!-- Scheduler toolbar -->
-        <div class="sch-toolbar" id="planToolbar">
-          <button class="today-btn" onclick="goToToday()">Oggi</button>
-          <button class="nav-arrow" onclick="shiftWeek(-1)">‹</button>
-          <button class="nav-arrow" onclick="shiftWeek(1)">›</button>
-          <span id="weekNav"></span>
-          <div class="t-divider"></div>
-          <div class="view-seg" id="planModeSeg">
-            <button class="on" data-pm="week"  onclick="setPlanMode('week')">Settimana</button>
-            <button data-pm="month" onclick="setPlanMode('month')">Mese</button>
-          </div>
-          <div class="t-divider"></div>
-          <div class="t-search"><input type="search" id="q" placeholder="Cerca DAS…" oninput="renderGrid()" autocomplete="off"></div>
-          <select class="t-sel" id="fFiliale" onchange="renderGrid()"></select>
-          <select class="t-sel" id="fService" onchange="renderGrid()"></select>
-          <select class="t-sel" id="fStato" onchange="renderGrid()">
-            <option value="">Tutti gli stati</option>
-            <option value="turno">In turno</option>
-            <option value="riposo">Riposo (OFF)</option>
-            <option value="assente">Assenti</option>
-            <option value="dispo">Disponibili</option>
-          </select>
-          <div class="app-header-spacer"></div>
-          <button class="header-btn adminonly" onclick="openAuto()">⚙ Genera</button>
-          <button class="header-btn adminonly" onclick="openImport()">⬆ Importa</button>
-          <button class="header-btn primary adminonly" onclick="openAddDriver()">+ DAS</button>
-        </div>
-
-        <!-- Scheduler view container -->
-        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
-          <!-- Planning board -->
-          <div class="sch-view on" id="v-plan">
-            <div class="adminonly" id="autoBanner" style="display:none;background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px 16px;font-size:.8rem"></div>
-            <div id="violBanner" style="display:none;background:var(--bad-bg);border-bottom:1px solid var(--bad);padding:8px 16px;font-size:.8rem"></div>
-            <div class="board-outer" id="boardOuter">
-              <div id="boardInner">
-                <div class="board-empty"><div class="ei">🗓️</div><p>Caricamento turni…</p></div>
-              </div>
-            </div>
-            <!-- Bottom KPI bar -->
-            <div class="sch-bottom-bar">
-              <div class="bkpi pri"><div class="bkpi-val" id="kpiDrivers">—</div><div class="bkpi-lbl">Driver</div></div>
-              <div class="bkpi ok"> <div class="bkpi-val" id="kpiPresent">—</div><div class="bkpi-lbl">In turno</div></div>
-              <div class="bkpi bad"><div class="bkpi-val" id="kpiAbsent">—</div><div class="bkpi-lbl">Assenti</div></div>
-              <div class="bkpi warn"><div class="bkpi-val" id="kpiOff">—</div><div class="bkpi-lbl">OFF</div></div>
-              <div class="bkpi">   <div class="bkpi-val" id="kpiFc">—</div><div class="bkpi-lbl">Forecast</div></div>
-              <div class="bkpi">   <div class="bkpi-val" id="kpiCov">—</div><div class="bkpi-lbl">Copertura</div></div>
-              <div class="bkpi bad"><div class="bkpi-val" id="kpiViol">0</div><div class="bkpi-lbl">Conflitti</div></div>
-              <div class="bkpi" style="margin-left:auto">
-                <div class="bkpi-val" style="font-size:.72rem;font-weight:600;color:var(--text-muted)" id="kpiSyncBar">—</div>
-                <div class="bkpi-lbl">Sync</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Copertura view -->
-          <div class="sch-view" id="v-cov" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Copertura &amp; Delta <small id="covScope"></small></h1>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-              <div class="seg" id="covRangeSeg">
-                <button class="on" data-cr="week" onclick="setCovRange('week')">Settimana</button>
-                <button data-cr="month" onclick="setCovRange('month')">Mese</button>
-              </div>
-              <div class="weeknav" id="covWeekNav"></div>
-              <button class="btn ghost sm" onclick="toggleFcDelta()">Mostra forecast</button>
-            </div>
-            <div style="overflow:auto"><table class="grid" id="covGrid"></table></div>
-          </div>
-
-          <!-- DAS view -->
-          <div class="sch-view" id="v-das" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Anagrafica DAS <small id="dasScope"></small></h1>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-              <div class="t-search" style="max-width:220px"><input type="search" id="qDas" placeholder="Cerca…" oninput="renderDas()" autocomplete="off"></div>
-              <select id="aFiliale" onchange="renderDas()" class="t-sel"></select>
-              <select id="aStato" onchange="renderDas()" class="t-sel">
-                <option value="">Tutti</option><option value="active">Attivi</option>
-                <option value="inactive">Inattivi</option><option value="pending">In attesa</option>
-              </select>
-              <button class="btn ghost sm" onclick="exportDas()">⬇ CSV</button>
-            </div>
-            <div style="overflow:auto"><table id="dasTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"><thead></thead><tbody></tbody></table></div>
-          </div>
-
-          <!-- Contratti view -->
-          <div class="sch-view" id="v-contr" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Contratti &amp; Scadenze</h1>
-            <div style="overflow:auto"><table id="contrTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"><thead></thead><tbody></tbody></table></div>
-          </div>
-
-          <!-- Approvazioni (admin) -->
-          <div class="sch-view adminonly" id="v-appr" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Approvazioni DAS</h1><div id="apprList"></div>
-          </div>
-
-          <!-- Config (admin) -->
-          <div class="sch-view adminonly" id="v-cfg" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Configurazione</h1>
-            <div class="seg" style="margin-bottom:14px">
-              <button class="on" onclick="setCfgTab('filiali')">Filiali</button>
-              <button onclick="setCfgTab('codes')">Codici</button>
-              <button onclick="setCfgTab('services')">Servizi</button>
-              <button onclick="setCfgTab('contracts')">Contratti</button>
-              <button onclick="setCfgTab('users')">Account</button>
-              <button onclick="setCfgTab('counters')">Contatori</button>
-            </div>
-            <div id="cfgBody"></div>
-          </div>
-
-          <!-- Analisi (admin) -->
-          <div class="sch-view adminonly" id="v-an" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Analisi</h1>
-            <div style="display:flex;gap:8px;margin-bottom:10px">
-              <select id="anFiliale" onchange="renderAnalysis()" class="t-sel"></select>
-              <button class="btn ghost sm" onclick="exportAnalysis()">⬇ CSV</button>
-              <button class="btn ghost sm" onclick="exportOvertime()">⬇ Straordinari</button>
-            </div>
-            <div class="an-kpis" id="anKpis"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="anCharts"></div>
-          </div>
-
-          <!-- Registro (admin) -->
-          <div class="sch-view adminonly" id="v-log" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Registro modifiche</h1>
-            <div style="display:flex;gap:8px;margin-bottom:10px">
-              <div class="t-search" style="max-width:220px"><input type="search" id="qLog" placeholder="Cerca…" oninput="renderLog()" autocomplete="off"></div>
-              <button class="btn ghost sm" onclick="exportLog()">⬇ CSV</button>
-              <button class="btn warn sm adminonly" onclick="clearLog()">🗑 Svuota</button>
-            </div>
-            <div style="overflow:auto"><table id="logTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"></table></div>
-          </div>
-
-          <!-- Legenda -->
-          <div class="sch-view" id="v-leg" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Legenda codici turno</h1>
-            <div style="overflow:auto"><table id="legTbl" style="width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:14px"></table></div>
-            <h2 style="font-size:.85rem;font-weight:700;margin-bottom:8px">Inquadramenti contrattuali</h2>
-            <div style="overflow:auto"><table id="ctrTbl" style="width:100%;border-collapse:collapse;font-size:.78rem"></table></div>
-          </div>
-
-          <!-- Dati & Sync (admin) -->
-          <div class="sch-view adminonly" id="v-data" style="overflow:auto;padding:16px">
-            <h1 class="planhead">Dati &amp; Sincronizzazione</h1>
-            <p class="text-sm text-muted" style="margin-bottom:14px">Fonte di verità: PostgreSQL. localStorage è solo cache locale.</p>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-              <button class="btn ghost sm" onclick="exportJson()">⬇ Esporta JSON</button>
-              <label class="btn ghost sm">⬆ Importa JSON<input type="file" accept=".json" onchange="importJson(event)" style="display:none"></label>
-              <button class="btn warn sm adminonly" onclick="resetMonth()">🗑 Azzera mese</button>
-            </div>
-            <div style="display:flex;gap:8px;margin-bottom:12px">
-              <input id="apiUrl" class="inp" placeholder="URL endpoint legacy (opzionale)" style="max-width:340px;font-size:.8rem">
-              <button class="btn ghost sm" onclick="syncPull()">⬇ Pull</button>
-              <button class="btn ghost sm" onclick="syncPush()">⬆ Push</button>
-            </div>
-            <label style="display:flex;align-items:center;gap:7px;font-size:.8rem;cursor:pointer">
-              <input type="checkbox" id="autoGenChk" onchange="toggleAutoGen()">
-              Genera turni automaticamente all'inizio del mese
-            </label>
-            <div id="syncMsg" class="text-sm text-muted mt-2"></div>
-          </div>
-        </div>
-      </div><!-- /sec-scheduler -->
-
-      <!-- ══ EMPLOYEES ══════════════════════ -->
-      <div class="spa-section page-scroll" id="sec-employees" style="padding:22px 24px">
-        <div class="page-head">
-          <div>
-            <div class="page-title">👥 Dipendenti</div>
-            <div class="page-sub">Anagrafica, contratti, documenti</div>
-          </div>
-        </div>
-        <div class="card card-pad" style="max-width:900px">
-          <p class="text-muted text-sm" style="margin-bottom:12px">Il modulo dipendenti completo è disponibile nella pagina dedicata.</p>
-          <a class="btn btn-primary" href="employees.html" target="_blank">Apri modulo dipendenti ↗</a>
-        </div>
-      </div>
-
-      <!-- ══ REPORTS ═════════════════════════ -->
-      <div class="spa-section page-scroll" id="sec-reports" style="padding:22px 24px">
-        <div class="page-head"><div class="page-title">📈 Report &amp; Analytics</div></div>
-        <div class="charts-grid">
-          <div class="chart-card" style="grid-column:span 2">
-            <div class="chart-title">Presenze ultimi 30 giorni</div>
-            <div style="height:220px"><canvas id="rptChartAtt"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Forecast vs Pianificato</div>
-            <div style="height:220px"><canvas id="rptChartFc"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Tipi assenza (90 gg)</div>
-            <div style="height:220px"><canvas id="rptChartAbs"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Crescita dipendenti</div>
-            <div style="height:220px"><canvas id="rptChartGrow"></canvas></div>
-          </div>
-        </div>
-        <div class="card card-pad mt-4">
-          <div class="section-title mb-2">📁 Export</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px">
-            <a class="btn btn-ghost btn-sm" id="rptExpEmp">⬇ Dipendenti Excel</a>
-            <a class="btn btn-ghost btn-sm" id="rptExpFc">⬇ Forecast Excel</a>
-            <a class="btn btn-ghost btn-sm" id="rptExpSch">⬇ Turni Excel</a>
-            <a class="btn btn-ghost btn-sm" id="rptPdfMonth">🖨 Turni mese PDF</a>
-            <a class="btn btn-ghost btn-sm" id="rptPdfAbs">🖨 Assenze PDF</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══ SETTINGS (admin) ═══════════════ -->
-      <div class="spa-section page-scroll adminonly" id="sec-settings" style="padding:22px 24px">
-        <div class="page-head"><div class="page-title">⚙ Impostazioni</div></div>
-        <div class="card card-pad mb-4" style="max-width:700px">
-          <div class="section-title mb-2">👤 Crea account utente</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end">
-            <div><label class="lbl">Username</label><input id="nuUser" class="inp" autocapitalize="off"></div>
-            <div><label class="lbl">Password</label><input id="nuPass" class="inp" type="text"></div>
-            <div><label class="lbl">Nome</label><input id="nuName" class="inp"></div>
-            <div><label class="lbl">Ruolo</label>
-              <select id="nuRole" class="sel" style="width:100%">
-                <option value="team_leader">Team Leader</option>
-                <option value="osm">OSM</option>
-                <option value="hr_manager">HR Manager</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            <div><label class="lbl">Filiali</label><select id="nuBranches" class="sel" style="width:100%" multiple size="3"></select></div>
-            <div><button class="btn btn-primary w-full" onclick="createUser()">+ Crea account</button></div>
-          </div>
-          <div id="nuMsg" class="text-sm mt-2"></div>
-        </div>
-        <div class="card card-pad" style="max-width:700px">
-          <div class="section-title mb-2">Lista utenti</div>
-          <div style="overflow-x:auto"><table class="tbl" id="usersTbl"></table></div>
-        </div>
-      </div>
-
-    </div><!-- /app-body -->
-  </div><!-- /app-content -->
-</div><!-- /app-shell -->
-
-<!-- ── Shift editor (right drawer) ── -->
-<div id="slidePanel">
-  <div class="sp-head">
-    <div><h3 id="spTitle">Turno</h3><p id="spSub">—</p></div>
-    <button class="sp-close" onclick="closePanel()" title="ESC">✕</button>
+<!-- Driver editor -->
+<div class="overlay" id="drv"><div class="sheet"><div class="shead"><h3 id="drvTitle">Nuovo DAS</h3><p id="drvSub"></p></div>
+  <div class="sbody">
+    <div class="field2"><div class="field"><label>Cognome</label><input id="dCognome"></div><div class="field"><label>Nome</label><input id="dNome"></div></div>
+    <div class="field2"><div class="field"><label>Filiale</label><select id="dFiliale"></select></div><div class="field"><label>Service type</label><select id="dService" onchange="onServiceChange()"></select></div></div>
+    <div class="field2"><div class="field"><label>Tipo contratto</label><select id="dCtrType" onchange="toggleExpiry()"><option value="indeterminato">Indeterminato</option><option value="determinato">Determinato</option></select></div><div class="field"><label>Inquadramento</label><select id="dContratto" onchange="onContractChange()"></select></div></div>
+    <div class="field" id="expiryField" style="display:none"><label>Scadenza contratto</label><input id="dExpiry" type="date"></div>
+    <div class="field"><label>Data assunzione</label><input id="dHire" type="date"></div>
+    <div class="field2"><div class="field"><label>Transporter ID</label><input id="dTransporter" placeholder="es. A1B2C3D4E5" autocapitalize="characters"></div><div class="field"><label>Device / Telefono</label><input id="dDevice" placeholder="es. Samsung A14 #042"></div></div>
+    <div class="field"><label>Codice turno predefinito</label><select id="dDefault"></select></div>
+    <div class="field"><label>Giorni lavorativi</label><div class="daypick" id="dDays"></div></div>
+    <div class="field"><label class="chk"><input type="checkbox" id="dAutofill" checked> Compila subito i turni del mese sui giorni lavorativi</label></div>
   </div>
-  <div class="sp-body">
-    <div id="spConflicts"></div>
-    <div class="sp-field">
-      <label>Codice turno</label>
-      <div class="sp-service-grid" id="spServiceGrid"></div>
-    </div>
-    <div class="sp-field">
-      <label>Cerca / inserisci codice</label>
-      <input id="spCodeInput" list="codeList" placeholder="es. SameA, OFF, M…" autocomplete="off">
-    </div>
-    <div class="sp-field">
-      <label>Note</label>
-      <textarea id="spNote" placeholder="Note opzionali…"></textarea>
-    </div>
-    <hr class="divider">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="sp-field"><label>Driver</label><select id="spDriver"></select></div>
-      <div class="sp-field"><label>Giorno</label><input id="spDay" type="number" min="1" max="31"></div>
-    </div>
-    <div class="sp-field">
-      <label>Info driver</label>
-      <div id="spDriverInfo" class="text-sm text-muted" style="padding:4px 0"></div>
-    </div>
-  </div>
-  <div class="sp-footer">
-    <button class="sp-btn ok"    onclick="boardSpSave()">✓ Salva</button>
-    <button class="sp-btn ghost" onclick="boardSpDuplicate()">⊕ Duplica</button>
-    <button class="sp-btn del"   onclick="boardSpDelete()">🗑 Svuota</button>
-  </div>
-</div>
-<div id="spBackdrop" onclick="closePanel()" style="position:fixed;inset:0;z-index:299;display:none"></div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn ok" id="drvSave" onclick="saveDriver()">Salva</button></div></div></div>
 
-<!-- ── Scheduler overlays ── -->
-<div class="overlay" id="picker">
-  <div class="obox" style="max-width:520px">
-    <button class="obox-close" onclick="closeAll()">✕</button>
-    <h2 id="pkTitle">Seleziona turno</h2>
-    <p class="text-sm text-muted" id="pkSub" style="margin:-6px 0 12px"></p>
-    <div id="pkBody"></div>
+<!-- Auto-generate -->
+<div class="overlay" id="auto"><div class="sheet"><div class="shead"><h3>Genera turni del mese</h3><p>Compila i giorni in base ai giorni lavorativi e al codice predefinito di ogni DAS.</p></div>
+  <div class="sbody">
+    <div class="field"><label>Filiale</label><select id="aFiliale"></select></div>
+    <div class="field"><label>Giorni non lavorativi</label><select id="aOff"><option value="OFF">Segna come OFF (riposo)</option><option value="">Lascia vuoto</option></select></div>
+    <div class="field"><label>Celle già compilate</label><select id="aMode"><option value="empty">Compila solo le vuote</option><option value="all">Sovrascrivi tutto</option></select></div>
+    <p class="note" id="autoPrev"></p>
   </div>
-</div>
-<div class="overlay" id="loginBox">
-  <div class="obox">
-    <button class="obox-close" onclick="closeAll()">✕</button>
-    <h2>Accesso team</h2>
-    <div style="display:grid;gap:10px;margin-top:12px">
-      <div><label class="lbl">Username (opzionale)</label><input id="luUser" class="inp" placeholder="Lascia vuoto per Admin"></div>
-      <div><label class="lbl">PIN</label><input id="luPin" class="inp" type="password" maxlength="12" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="btn" onclick="doLogin()">Accedi</button>
-      <div id="luMsg" class="text-sm" style="color:var(--bad)"></div>
-      <hr class="divider">
-      <div class="adminonly">
-        <label class="lbl">Nuovo PIN admin</label>
-        <div style="display:flex;gap:7px"><input id="pinNew" class="inp flex-1" type="text" placeholder="Nuovo PIN"><button class="btn ghost sm" onclick="changePin()">Salva</button></div>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="overlay" id="autoPick">
-  <div class="obox">
-    <button class="obox-close" onclick="closeAll()">✕</button>
-    <h2>Genera turni automatici</h2>
-    <div style="display:grid;gap:10px;margin-top:12px">
-      <div><label class="lbl">Filiale</label><select id="autoFil" class="sel w-full"></select></div>
-      <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="autoOverwrite"> Sovrascrivi celle già compilate</label>
-      <button class="btn" onclick="runAutoGen()">▶ Genera</button>
-      <div id="autoMsg" class="text-sm text-muted"></div>
-    </div>
-  </div>
-</div>
-<div class="overlay" id="importDasPick">
-  <div class="obox">
-    <button class="obox-close" onclick="closeAll()">✕</button>
-    <h2>Importa DAS</h2>
-    <div style="display:grid;gap:10px;margin-top:12px">
-      <div>
-        <label class="lbl">Incolla lista (uno per riga: Cognome Nome Filiale Contratto Servizio)</label>
-        <textarea id="ewArea" class="inp" rows="8" placeholder="Rossi Mario DLO1 21 NEXT&#10;Bianchi Laura DLO7 PTV 18h SAME A"></textarea>
-      </div>
-      <button class="btn" onclick="importEw()">Importa</button>
-      <div id="ewMsg" class="text-sm text-muted"></div>
-    </div>
-  </div>
-</div>
-<div class="overlay" id="drvEdit">
-  <div class="obox">
-    <button class="obox-close" onclick="closeAll()">✕</button>
-    <h2 id="drvEditTitle">Modifica DAS</h2>
-    <div style="display:grid;gap:10px;margin-top:12px" id="drvEditBody"></div>
-  </div>
-</div>
-<div class="overlay" id="filPick">
-  <div class="obox" style="max-width:280px;text-align:center">
-    <button class="obox-close" onclick="closeAll()">✕</button>
-    <h2>Seleziona filiale</h2>
-    <div id="filPickList" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px"></div>
-  </div>
-</div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn amber" onclick="runAuto()">Genera</button></div></div></div>
 
-<script src="api.js"></script>
+<!-- Import DAS -->
+<div class="overlay" id="impDas"><div class="sheet"><div class="shead"><h3>Importa DAS</h3><p>Incolla righe CSV o carica un file. Una riga per DAS.</p></div>
+  <div class="sbody">
+    <div class="field"><label>Colonne (separatore ; oppure ,)</label>
+      <p class="note" style="margin-top:0">Cognome ; Nome ; Filiale ; Service ; Contratto ; Tipo(indeterminato/determinato) ; Scadenza(AAAA-MM-GG) ; GiorniLavorativi(es. 12345) ; CodicePredefinito ; TransporterID ; Device ; DataAssunzione(AAAA-MM-GG)<br>I giorni: 1=Lun … 6=Sab, 7 o 0=Dom. Solo Cognome è obbligatorio; Transporter ID e Device sono facoltativi.</p>
+    </div>
+    <div class="field"><label>Dati</label><textarea id="impText" placeholder="Rossi;Mario;DLO1;SAME A;21;indeterminato;;12345;SameA&#10;Bianchi;Luca;DLO1;NEXT;13;determinato;2026-12-31;123456;X"></textarea></div>
+    <div class="toolbar"><button class="btn ghost sm" onclick="document.getElementById('impCsv').click()">📄 Carica .csv</button><input type="file" id="impCsv" accept=".csv,.txt" style="display:none" onchange="loadCsvFile(event)"><button class="btn ghost sm" onclick="downloadTemplate()">⬇ Modello CSV</button></div>
+  </div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn ok" onclick="runImport()">Importa</button></div></div></div>
 
+<!-- Export week -->
+<div class="overlay" id="expWeek"><div class="sheet"><div class="shead"><h3>Esporta turni settimana</h3><p>Foglio per i driver: giorni di lavoro e di riposo della settimana selezionata.</p></div>
+  <div class="sbody">
+    <div class="field"><label>Filiale</label><select id="ewFiliale"></select></div>
+    <div class="field"><label>Settimana</label><select id="ewWeek"></select></div>
+    <div class="field"><label>Anteprima</label><textarea id="ewPrev" readonly style="min-height:200px"></textarea></div>
+  </div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Chiudi</button><button class="btn ghost" onclick="copyWeek()">Copia</button><button class="btn ok" onclick="downloadWeek()">⬇ Scarica .txt</button></div></div></div>
+
+<!-- Contract editor -->
+<div class="overlay" id="ctrEd"><div class="sheet" style="max-width:460px"><div class="shead"><h3 id="ctrEdTitle">Contratto</h3></div>
+  <div class="sbody"><div class="field2"><div class="field"><label>Codice</label><input id="cCode"></div><div class="field"><label>Ore/mese</label><input id="cOre" type="number" min="0"></div></div>
+    <div class="field"><label>Descrizione</label><input id="cLabel"></div>
+    <div class="field"><label>Giorni lavorativi predefiniti</label><div class="daypick" id="cDays"></div></div></div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn ok" onclick="saveContract()">Salva</button></div></div></div>
+
+<!-- Code editor -->
+<div class="overlay" id="codeEd"><div class="sheet" style="max-width:460px"><div class="shead"><h3 id="codeEdTitle">Codice</h3></div>
+  <div class="sbody"><div class="field2"><div class="field"><label>Codice</label><input id="kCode"></div><div class="field"><label>Categoria</label><select id="kCls"></select></div></div>
+    <div class="field"><label>Descrizione</label><input id="kLabel"></div></div>
+  <div class="sfoot"><button class="btn warn" onclick="closeCodeEd()">Annulla</button><button class="btn ok" onclick="saveCode()">Salva</button></div></div></div>
+
+<!-- Quick legend manager -->
+<div class="overlay" id="legQuick"><div class="sheet"><div class="shead"><h3>Legenda — codici turno &amp; assenza</h3><p>Tocca un codice per modificarlo, o aggiungine uno nuovo. Le modifiche valgono ovunque.</p></div>
+  <div class="sbody" id="legQuickBody"></div>
+  <div class="sfoot"><button class="btn amber" onclick="legAddNew()">+ Nuovo codice</button><button class="btn warn" onclick="closeAll()">Chiudi</button></div></div></div>
+
+<!-- Service / forecast editor -->
+<div class="overlay" id="svcEd"><div class="sheet"><div class="shead"><h3 id="svcEdTitle">Servizio (forecast)</h3></div>
+  <div class="sbody">
+    <div class="field2"><div class="field"><label>Nome (etichetta)</label><input id="sLabel" placeholder="es. SAME D"></div><div class="field"><label>Chiave</label><input id="sKey" placeholder="auto"></div></div>
+    <div class="field"><label>Tipo di forecast</label><select id="sType" onchange="onSvcType()"><option value="edit">Editabile (inserisci i valori)</option><option value="min">Derivato = MIN di due servizi</option></select></div>
+    <div class="field2" id="sMinRow" style="display:none"><div class="field"><label>Componente A</label><select id="sMinA"></select></div><div class="field"><label>Componente B</label><select id="sMinB"></select></div></div>
+    <div class="field"><label>Codici conteggiati (Harmony / Delta)</label><div class="chipsel" id="sCodes"></div></div>
+    <div class="field"><label>Filiali assegnate (vuoto = tutte)</label><div class="chipsel" id="sFiliali"></div></div>
+  </div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn ok" onclick="saveSvc()">Salva</button></div></div></div>
+
+<!-- Per-account forecast assignment -->
+<div class="overlay" id="userSvc"><div class="sheet"><div class="shead"><h3 id="usTitle">Forecast assegnati</h3><p>Scegli i forecast che questo team può vedere e gestire. Nessuno selezionato = tutti i forecast della sua filiale.</p></div>
+  <div class="sbody"><div class="field"><label>Forecast / service</label><div class="chipsel" id="usFor"></div></div></div>
+  <div class="sfoot"><button class="btn ghost" onclick="clearUserSvc()">Tutti</button><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn ok" onclick="saveUserSvc()">Salva</button></div></div></div>
+
+<!-- Account filiali -->
+<div class="overlay" id="userFil"><div class="sheet"><div class="shead"><h3 id="ufTitle">Filiali account</h3><p>Seleziona le filiali che questo team member può gestire. Potrà passare tra esse dal selettore in alto.</p></div>
+  <div class="sbody"><div class="field"><label>Filiali</label><div class="chipsel" id="ufList"></div></div></div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn ok" onclick="saveUserFil()">Salva</button></div></div></div>
+
+<!-- Filiale details -->
+<div class="overlay" id="filDet"><div class="sheet" style="max-width:420px"><div class="shead"><h3 id="fdTitle">Filiale</h3><p>Dati mostrati nella stampa Turnazione.</p></div>
+  <div class="sbody">
+    <div class="field"><label>Parcheggi / luoghi di convocazione</label><div id="fdParks"></div><button class="btn ghost sm" onclick="addParkRow()" style="margin-top:6px">+ Aggiungi parcheggio</button></div>
+    <div class="field" id="fdSvcWrap"><label>Forecast / service di questa filiale</label><div class="chipsel" id="fdSvc"></div></div>
+  </div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn ok" onclick="saveFilDetail()">Salva</button></div></div></div>
+
+<!-- Turnazione PDF -->
+<div class="overlay" id="turnPdf"><div class="sheet" style="max-width:460px"><div class="shead"><h3>Turnazione (PDF / stampa)</h3><p>Scegli la vista, poi usa "Stampa" e salva come PDF da inviare.</p></div>
+  <div class="sbody">
+    <div class="field"><label>Vista</label><select id="tpView" onchange="tpToggle()"><option value="day">Giornaliera</option><option value="week">Settimanale</option><option value="month">Mensile</option></select></div>
+    <div class="field"><label>Filiale</label><select id="tpFil"></select></div>
+    <div class="field" id="tpDayWrap"><label>Giorno</label><select id="tpDay"></select></div>
+    <div class="field" id="tpWeekWrap" style="display:none"><label>Settimana</label><select id="tpWeek"></select></div>
+    <div class="field"><label class="chk"><input type="checkbox" id="tpPark" checked> Includi parcheggio e orario convocazione</label></div>
+    <div class="field"><label class="chk"><input type="checkbox" id="tpRiposi" checked> Includi i riposi</label></div>
+  </div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Chiudi</button><button class="btn ok" onclick="printTurnazione()">🖨️ Stampa / PDF</button></div></div></div>
+
+<!-- Filiale picker (team) -->
+<div class="overlay" id="filPick"><div class="sheet" style="max-width:380px"><div class="shead"><h3>Seleziona la tua filiale</h3><p>Gestirai i DAS e i turni di questa filiale.</p></div>
+  <div class="sbody"><div class="codegrid" id="filPickList"></div></div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Chiudi</button></div></div></div>
+
+<!-- Login -->
+<div class="overlay" id="login"><div class="sheet" style="max-width:380px"><div class="shead"><h3>Accesso</h3><p>Admin: username <b>admin</b> (o vuoto) + PIN. Team member: username e PIN forniti dall'Admin.</p></div>
+  <div class="sbody"><div class="field"><label>Username</label><input id="logUser" placeholder="admin oppure il tuo username" autocapitalize="off" autocomplete="off"></div><div class="field"><label>PIN</label><input id="pinIn" type="password" inputmode="numeric" onkeydown="if(event.key==='Enter')doLogin()"></div></div>
+  <div class="sfoot"><button class="btn warn" onclick="closeAll()">Annulla</button><button class="btn ok" onclick="doLogin()">Entra</button></div></div></div>
+
+<div class="toast" id="toast"></div>
 <script>
-
-
 /* ============================================================
    TurniDSP v4 — vista settimanale, filiali configurabili,
    scoping per filiale (team), import/export DAS, export
@@ -1103,1114 +1042,27 @@ let toastT=null;function toast(m){const t=document.getElementById("toast");t.tex
 document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)closeAll();}));
 
 /* ---------- init ---------- */
+(function(){
+  /* Bridge to the platform login (set by the main app in localStorage).
+     - If not logged into the platform, send the user to the login page.
+     - If the platform user is an admin, open the scheduler in admin (editable)
+       mode automatically, ignoring any stale local "team" lock and the legacy PIN. */
+  var pUser=null, pTok=localStorage.getItem("turnidsp_token");
+  try{ pUser=JSON.parse(localStorage.getItem("turnidsp_user")); }catch(e){}
+  if(!pTok || !pUser){ (window.top||window).location.replace("login.html"); return; }
+  var platformAdmin = pUser.role==="admin";
 
-/* ════════════════════════════════════════════════════════════════
-   TurniDSP SPA — Unified Single-Page Application
-   Scheduler core + Dashboard + Router + Shared state
-   ════════════════════════════════════════════════════════════════ */
-
-// ── Auth guard ────────────────────────────────────────────────────
-(function() {
-  var tok = localStorage.getItem('turnidsp_token');
-  var u = null; try { u = JSON.parse(localStorage.getItem('turnidsp_user')); } catch(e) {}
-  if (!tok || !u) { location.replace('login.html'); return; }
-
-  // Set user in globals
-  var name = u.full_name || u.username || '—';
-  var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
-  document.getElementById('navAvatar').textContent = initials;
-  document.getElementById('navUname').textContent = name;
-  document.getElementById('navRole').textContent = {
-    admin:'Amministratore', osm:'OSM', hr_manager:'HR Manager', team_leader:'Team Leader'
-  }[u.role] || u.role;
-
-  if (u.role === 'admin') {
-    document.body.classList.add('is-admin');
-  }
-
-  // ── Init scheduler auth (mimics the IIFE from original scheduler) ──
-  var platformAdmin = u.role === 'admin';
   loadMonth();
-  if (platformAdmin) {
-    ROLE = 'admin'; teamLocked = false; currentUser = u.full_name || u.username || 'admin';
-    localStorage.setItem('turniDSP_role', 'admin'); saveSession();
+  if(platformAdmin){
+    ROLE="admin"; teamLocked=false; currentUser=pUser.full_name||pUser.username||"admin";
+    localStorage.setItem("turniDSP_role","admin"); saveSession();
   } else {
-    var sess = null; try { sess = JSON.parse(localStorage.getItem('turniDSP_session')); } catch(e) {}
-    if (sess && sess.role === 'team' && sess.locked && users().some(function(usr){ return usr.username === sess.user; })) {
-      ROLE = 'team'; teamLocked = true; currentUser = sess.user; teamFiliale = sess.filiale;
-    } else {
-      ROLE = 'team'; teamLocked = false; currentUser = u.full_name || u.username || 'team';
-    }
+    let sess=null;try{sess=JSON.parse(localStorage.getItem("turniDSP_session"));}catch(e){}
+    if(sess&&sess.role==="team"&&sess.locked&&users().some(u=>u.username===sess.user)){ROLE="team";teamLocked=true;currentUser=sess.user;teamFiliale=sess.filiale;}
+    else{ROLE="team";teamLocked=false;currentUser=pUser.full_name||pUser.username||"team";}
   }
-  ensureTeamFiliale(); applyRole(); refreshFilSelects();
-  // Don't call refreshAll() here — boot() below renders once the DOM is ready
-})();
-
-// ── Logout ────────────────────────────────────────────────────────
-// doLogout() defined in SPA layer below
-
-// ── SPA Router ───────────────────────────────────────────────────
-// One workspace: Scheduler (which now also contains the overview strip
-// formerly known as "Dashboard"). Employees / Reports / Settings remain
-// separate sections reachable from the sidebar, but they all share the
-// exact same shell — header, sidebar, theme, and TurniApi state.
-var _currentSection   = 'scheduler';
-var _workspaceInited  = false;
-var _reportsInited    = false;
-
-var SECTION_TITLES = {
-  scheduler: 'Workspace',
-  employees: 'Dipendenti',
-  reports:   'Report & Analytics',
-  settings:  'Impostazioni',
-};
-
-function navigate(section, opts) {
-  opts = opts || {};
-  _currentSection = section;
-
-  // Show/hide top-level sections
-  document.querySelectorAll('.spa-section').forEach(function(el) {
-    el.classList.toggle('active', el.id === 'sec-' + section);
-  });
-
-  // Update sidebar nav links
-  document.querySelectorAll('.nav-item[data-section]').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.section === section);
-  });
-
-  // Update header title
-  document.getElementById('pageTitle').textContent = SECTION_TITLES[section] || section;
-  document.getElementById('pageSubtitle').textContent = '';
-
-  var workspaceHeader = document.getElementById('workspaceHeader');
-  var schedSubnav      = document.getElementById('sched-subnav');
-  var planToolbar       = document.getElementById('planToolbar');
-
-  if (section === 'scheduler') {
-    workspaceHeader.style.display = 'flex';
-    schedSubnav.style.display     = 'block';
-    if (planToolbar) planToolbar.style.display = '';
-
-    // Boot the workspace (overview strip + scheduler engine) exactly once.
-    // After that, both halves are always live in the DOM — no re-init,
-    // no page switch, just one continuous scroll surface.
-    if (!_workspaceInited) {
-      _workspaceInited = true;
-      bootWorkspaceOverview();
-    } else {
-      refreshOverview();
-    }
-
-    // Apply any filters passed in from an overview widget click
-    if (opts.branch) {
-      teamFiliale = opts.branch;
-      ensureTeamFiliale();
-    }
-    if (opts.filterStatus) {
-      var fs = document.getElementById('fStato');
-      if (fs) fs.value = opts.filterStatus;
-    }
-    refreshAll();
-
-  } else if (section === 'reports') {
-    workspaceHeader.style.display = 'none';
-    schedSubnav.style.display     = 'none';
-    if (!_reportsInited) {
-      _reportsInited = true;
-      renderReportCharts();
-    }
-
-  } else if (section === 'settings') {
-    workspaceHeader.style.display = 'none';
-    schedSubnav.style.display     = 'none';
-    loadUsers();
-
-  } else {
-    workspaceHeader.style.display = 'none';
-    schedSubnav.style.display     = 'none';
-  }
-
-  // Update browser URL without reload
-  try { history.pushState({ section: section }, '', '#' + section); } catch(e) {}
-}
-
-// Handle browser back/forward
-window.addEventListener('popstate', function(e) {
-  var section = (e.state && e.state.section) || location.hash.replace('#', '') || 'scheduler';
-  navigate(section);
-});
-
-// ── Workspace overview: collapse / expand the KPI+Alerts strip ───
-var _overviewCollapsed = false;
-function toggleOverview() {
-  _overviewCollapsed = !_overviewCollapsed;
-  var body = document.getElementById('overviewBody');
-  var btn  = document.getElementById('overviewToggle');
-  if (body) body.style.display = _overviewCollapsed ? 'none' : '';
-  if (btn)  btn.textContent = (_overviewCollapsed ? '▸' : '▾') + ' Riepilogo';
-}
-
-// ── Jump from the sidebar straight to the overview strip ─────────
-function scrollToOverview() {
-  // Make sure we're on the scheduler workspace first
-  if (_currentSection !== 'scheduler') navigate('scheduler');
-  if (_overviewCollapsed) toggleOverview();
-  var el = document.getElementById('workspaceOverview');
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  document.querySelectorAll('#sched-subnav .nav-item[data-v]').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.v === 'overview');
-  });
-}
-
-// ── Click a KPI/alert/DSP row in the overview strip → filter the board ──
-// No page switch needed anymore: scheduler and overview share one screen,
-// so this just sets the filter and scrolls the board into view.
-function openSchedulerWithFilter(filterStatus) {
-  if (_currentSection !== 'scheduler') navigate('scheduler');
-  var fs = document.getElementById('fStato');
-  if (fs) { fs.value = filterStatus; renderGrid(); }
-  var board = document.getElementById('boardOuter');
-  if (board) board.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// ── Scheduler sub-view navigation ────────────────────────────────
-function schedSetView(v) {
-  setView(v);
-  // Update sidebar scheduler sub-nav
-  document.querySelectorAll('#sched-subnav .nav-item[data-v]').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.v === v);
-  });
-  var planToolbar = document.getElementById('planToolbar');
-  if (planToolbar) planToolbar.style.display = v === 'plan' ? '' : 'none';
-}
-
-// ── setSaveState (SPA version - updates both places) ─────────────
-function setSaveState(st) {
-  var el1 = document.getElementById('saveState');
-  var el2 = document.getElementById('schedSaveState');
-  var ns  = document.getElementById('navSync');
-  var text = '';
-  if (st === 'saving') text = '⏳ salvataggio…';
-  else if (st === 'saved')  text = '✓ salvato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
-  else if (st === 'error')  text = '✗ errore DB';
-  else if (st === 'queued') text = '⏳ in coda…';
-  else if (st === 'local')  text = '💾 locale';
-  if (el1) el1.textContent = text;
-  if (el2) el2.textContent = text;
-  if (ns && DB_SYNC) {
-    ns.textContent = st==='saved'?'🟢 DB OK': st==='error'?'🔴 DB errore':'🔵 In sync…';
-  }
-}
-
-// ── saveAll override for SPA ──────────────────────────────────────
-var _origSaveAll = saveAll;
-saveAll = function(manual) {
-  setSaveState(DB_SYNC ? 'queued' : 'local');
-  if (manual) toast(DB_SYNC ? 'Salvataggio in corso…' : 'Dati salvati in locale');
-  if (DB_SYNC) { clearTimeout(dbSyncTimer); dbSyncTimer = setTimeout(saveMonthToDB, 1200); }
-  else { try { localStorage.setItem(lsKey(YM), JSON.stringify(state)); } catch(_) {} }
-};
-
-// ── setView override (SPA toolbar sync) ──────────────────────────
-var _origSetViewSPA = setView;
-setView = function(v) {
-  _origSetViewSPA(v);
-  var planToolbar = document.getElementById('planToolbar');
-  if (planToolbar) planToolbar.style.display = v === 'plan' ? '' : 'none';
-};
-
-// ── Autosave indicator ────────────────────────────────────────────
-var _autoTimer = null;
-function showAutosave(st) {
-  var el = document.getElementById('autosaveIndicator');
-  var icon = document.getElementById('autosaveIcon');
-  var txt  = document.getElementById('autosaveText');
-  if (!el) return;
-  el.className = 'show ' + st;
-  if (st==='saving') { icon.textContent='⏳'; txt.textContent='Salvataggio…'; }
-  else if (st==='saved') { icon.textContent='✓'; txt.textContent='Salvato'; }
-  else if (st==='error') { icon.textContent='✗'; txt.textContent='Errore salvataggio'; }
-  clearTimeout(_autoTimer);
-  _autoTimer = setTimeout(function(){ el.classList.remove('show'); }, 2200);
-}
-
-function showLoadingOverlay(show) {
-  var ov = document.getElementById('dbLoadOverlay');
-  if (show && !ov) {
-    ov = document.createElement('div'); ov.id = 'dbLoadOverlay';
-    ov.style.cssText = 'position:fixed;top:65px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 18px;font-size:.8rem;font-weight:600;color:var(--brand);box-shadow:var(--shadow-lg);z-index:400;display:flex;align-items:center;gap:7px';
-    ov.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Caricamento da database…';
-    document.body.appendChild(ov);
-  } else if (!show && ov) ov.remove();
-}
-
-var _hintTimer = null;
-function showKbdHint(msg) {
-  var el = document.getElementById('kbdHint');
-  if (!el) return; el.textContent = msg; el.classList.add('show');
-  clearTimeout(_hintTimer); _hintTimer = setTimeout(function(){ el.classList.remove('show'); }, 1400);
-}
-
-// ── Undo/Redo (SPA wrappers) ──────────────────────────────────────
-function spaDoUndo() { if(typeof doUndo==='function') doUndo(); }
-function spaDoRedo() { if(typeof doRedo==='function') doRedo(); }
-
-// ── Board renderGrid (Monday-style) ──────────────────────────────
-var CLS_COLORS_SPA = {
-  next:  {bg:'var(--next-bg)', fg:'var(--next)', br:'var(--next-br)', av:'#92400E'},
-  samea: {bg:'var(--samea-bg)',fg:'var(--samea)',br:'var(--samea-br)',av:'#1E40AF'},
-  sameb: {bg:'var(--sameb-bg)',fg:'var(--sameb)',br:'var(--sameb-br)',av:'#5B21B6'},
-  mm:    {bg:'var(--mm-bg)',   fg:'var(--mm)',   br:'var(--mm-br)',   av:'#065F46'},
-  abs:   {bg:'var(--abs-bg)',  fg:'var(--abs)',  br:'var(--abs-br)',  av:'#374151'},
-  mal:   {bg:'var(--mal-bg)',  fg:'var(--mal)',  br:'var(--mal-br)',  av:'#991B1B'},
-  off:   {bg:'var(--off-bg)',  fg:'var(--off)',  br:'var(--off-br)',  av:'#374151'},
-};
-function getCLS(c){ return CLS_COLORS_SPA[c] || CLS_COLORS_SPA.abs; }
-var _grpCollapsed = new Set();
-function buildGroups(drivers) {
-  var groups=CFG().groups, result=[], used={};
-  for(var gi=0;gi<groups.length;gi++){
-    var g=groups[gi];
-    var drv=drivers.filter(function(d){
-      var dc=codeMeta(d.defaultCode||defCode(d.service)).cls||'abs';
-      return dc===g.cls&&!used[d.id];
-    });
-    if(drv.length>0){drv.forEach(function(d){used[d.id]=1;});result.push({cls:g.cls,name:g.name,drivers:drv});}
-  }
-  var lo=drivers.filter(function(d){return !used[d.id];});
-  if(lo.length) result.push({cls:'abs',name:'Altri',drivers:lo});
-  return result;
-}
-function toggleGroup(cls){
-  if(_grpCollapsed.has(cls))_grpCollapsed.delete(cls); else _grpCollapsed.add(cls);
-  renderGrid();
-}
-
-renderGrid = function() {
-  var allDays=[]; for(var dd=1;dd<=daysInMonth(YM);dd++) allDays.push(dd);
-  var weeks=monthWeeks();
-  if(weekIdx>=weeks.length)weekIdx=weeks.length-1;
-  if(weekIdx<0)weekIdx=0;
-  var visDays=planMode==='week'?(weeks[weekIdx]?weeks[weekIdx].days:allDays):allDays;
-  // Header label
-  var mNames=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-  var ym=YM.split('-').map(Number);
-  var label=mNames[ym[1]-1]+' '+ym[0];
-  if(planMode==='week'&&weeks.length){var w=weeks[weekIdx];label+='  ·  Week '+w.week+' · '+fmtDM(YM,w.days[0])+'–'+fmtDM(YM,w.days[w.days.length-1]);}
-  var ml=document.getElementById('monthLabel'); if(ml) ml.textContent=label;
-  var ps=document.getElementById('planScope'); if(ps) ps.textContent='';
-  var wn=document.getElementById('weekNav'); if(wn) wn.style.display='none';
-  var now=new Date(),nowISO=now.toISOString().slice(0,7),nowDay=now.getDate();
-  var all=scopedActive(),drivers=filteredDrivers();
-  gridRefDay=(nowISO===YM&&visDays.includes(nowDay))?nowDay:visDays[0];
-  gridDrivers=drivers;gridDays=visDays;refreshCodeList();
-  // Bottom KPIs
-  var kPres=0,kAbs=0,kOff=0,kViols=0;
-  all.forEach(function(dr){
-    var c=getCode(dr.id,gridRefDay);if(!c)return;
-    var cls=codeCls(c);
-    if(c.toUpperCase()==='OFF')kOff++;else if(cls==='mal')kAbs++;else kPres++;
-    if(driverHasViolation(dr))kViols++;
-  });
-  var svs=scopeServices(),fcT=0,plT=0;
-  svs.forEach(function(s){visDays.forEach(function(d){fcT+=forecastOf(s,d);plT+=cnt(dayCodes(d,all),s.count);});});
-  function setEl(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
-  setEl('kpiDrivers',all.length);setEl('kpiPresent',kPres);setEl('kpiAbsent',kAbs);
-  setEl('kpiOff',kOff);setEl('kpiFc',fcT||'—');setEl('kpiCov',fcT>0?Math.round(plT/fcT*100)+'%':'—');
-  setEl('kpiViol',kViols);setEl('kpiSyncBar',DB_SYNC?'🟢 DB':'🟡 locale');
-  // Legacy compat
-  setEl('statDrivers',all.length);setEl('statPresent',kPres);setEl('statAbsent',kAbs);setEl('statOff',kOff);
-  // Violation banner
-  var viols=all.filter(driverHasViolation),vb=document.getElementById('violBanner');
-  if(vb){if(viols.length){vb.style.display='block';vb.innerHTML='<b>⚠️ Attenzione riposi:</b> '+viols.length+' DAS con 7+ giorni consecutivi: '+viols.slice(0,5).map(function(d){return esc(d.cognome);}).join(', ')+(viols.length>5?'…':'')+'.';} else vb.style.display='none';}
-  // Grid layout
-  var colT='205px repeat('+visDays.length+',50px) 38px';
-  document.documentElement.style.setProperty('--grid-cols',colT);
-  var html='';
-  // Column headers
-  html+='<div class="board-thead" style="grid-template-columns:'+colT+'">';
-  html+='<div class="col-emp-h">DAS / Servizio</div>';
-  visDays.forEach(function(d){
-    var isT=nowISO===YM&&d===nowDay;
-    var isW=[0,6].includes(new Date(YM+'-'+String(d).padStart(2,'0')).getDay());
-    html+='<div class="col-day-h'+(isT?' today-h':'')+(isW?' wend-h':'')+'">'+'<span class="dow">'+dowName(YM,d).toUpperCase()+'</span><span class="dnum">'+d+'</span></div>';
-  });
-  html+='<div class="col-tot-h">SEM</div></div>';
-  if(!drivers.length){
-    html+='<div class="board-empty"><div class="ei">👥</div><p>Nessun DAS'+(scopeFil()?' per '+esc(scopeFil()):'')+'. Aggiungilo da "Anagrafica DAS".</p></div>';
-    document.getElementById('boardInner').innerHTML=html;return;
-  }
-  var groups=buildGroups(drivers);
-  groups.forEach(function(grp){
-    var st=getCLS(grp.cls),collapsed=_grpCollapsed.has(grp.cls);
-    html+='<div class="group-block'+(collapsed?' collapsed':'')+'\">';
-    html+='<div class="group-header-row" style="grid-template-columns:'+colT+'">';
-    html+='<div class="gh-cell" onclick="toggleGroup(\''+grp.cls+'\')"><span class="gh-arrow">▼</span><span class="gh-dot" style="background:'+st.fg+'"></span>'+esc(grp.name)+'<span class="gh-count">'+grp.drivers.length+'</span></div>';
-    for(var gi=0;gi<visDays.length;gi++) html+='<div style="background:'+st.bg+';opacity:.3;border-right:1px solid var(--line)"></div>';
-    html+='<div style="background:'+st.bg+';opacity:.3"></div></div>';
-    if(!collapsed){
-      grp.drivers.forEach(function(dr){
-        var vflag=consecutiveFlag(dr),viol=Object.keys(vflag).length>0;
-        var initials=((dr.cognome||'')[0]||'').toUpperCase()+((dr.nome||'')[0]||'').toUpperCase();
-        var wTotal=workedDays(dr,visDays);
-        html+='<div class="emp-board-row" style="grid-template-columns:'+colT+'">';
-        html+='<div class="emp-cell">'+(viol?'<span class="viol-dot" title="7+ giorni consecutivi">⚠</span>':'')+
-          '<div class="emp-avatar" style="background:'+st.av+'">'+esc(initials)+'</div>'+
-          '<div style="min-width:0"><div class="emp-name-text">'+esc(dr.cognome)+' '+esc(dr.nome)+'</div>'+
-          '<div class="emp-sub-text">'+esc(dr.filiale)+' · '+esc(dr.contratto||'—')+'</div></div></div>';
-        visDays.forEach(function(d){
-          var code=getCode(dr.id,d),cls=codeCls(code),cst=getCLS(cls);
-          var isT=nowISO===YM&&d===nowDay,isW=[0,6].includes(new Date(YM+'-'+String(d).padStart(2,'0')).getDay()),isV=!!vflag[d];
-          html+='<div id="c_'+dr.id+'_'+d+'" class="shift-cell'+(isT?' today-sc':'')+(isW?' wend-sc':'')+(isV?' viol-sc':'')+'"'+
-            ' onclick="openCellEdit('+dr.id+','+d+')"'+
-            ' ondblclick="spOpenPanel('+dr.id+','+d+')"'+
-            ' oncontextmenu="boardCtxOpen(event,'+dr.id+','+d+')"'+
-            ' ondragover="boardDragOver(event,this)"'+
-            ' ondragleave="boardDragLeave(this)"'+
-            ' ondrop="boardDrop(event,'+dr.id+','+d+')">';
-          if(code){
-            html+='<div class="shift-card" draggable="true"'+
-              ' ondragstart="boardDragStart(event,'+dr.id+','+d+')"'+
-              ' ondragend="boardDragEnd()"'+
-              ' style="background:'+cst.bg+';color:'+cst.fg+';border-color:'+cst.br+'"'+
-              ' title="'+esc(codeLabel(code))+'">'+esc(code)+'</div>';
-          }
-          html+='</div>';
-        });
-        html+='<div class="tot-sc">'+wTotal+'</div></div>';
-      });
-    }
-    html+='</div>';
-  });
-  document.getElementById('boardInner').innerHTML=html;
-};
-
-// ── goToToday / shiftWeek ────────────────────────────────────────
-function goToToday(){
-  var ti=new Date().toISOString().slice(0,7);
-  if(ti!==YM){YM=ti;weekIdx=0;loadMonth();return;}
-  var weeks=monthWeeks(),td=new Date().getDate();weekIdx=0;
-  for(var i=0;i<weeks.length;i++){if(weeks[i].days.includes(td)){weekIdx=i;break;}}renderGrid();
-}
-function shiftWeek(dir){
-  if(planMode==='week'){var weeks=monthWeeks();weekIdx=Math.max(0,Math.min(weeks.length-1,weekIdx+dir));renderGrid();}
-  else shiftMonth(dir);
-}
-
-// ── Drag & Drop ──────────────────────────────────────────────────
-var _bdSrc=null;
-function boardDragStart(e,id,d){_bdSrc={id,d,code:getCode(id,d)};e.dataTransfer.effectAllowed='copyMove';e.target.classList.add('dragging');}
-function boardDragEnd(){document.querySelectorAll('.shift-card.dragging').forEach(function(el){el.classList.remove('dragging');});_bdSrc=null;}
-function boardDragOver(e,cell){if(!_bdSrc)return;e.preventDefault();var copy=e.altKey||e.ctrlKey;cell.classList.toggle('drag-over',!copy);cell.classList.toggle('copy-over',copy);}
-function boardDragLeave(cell){cell.classList.remove('drag-over','copy-over');}
-function boardDrop(e,tId,tDay){
-  e.preventDefault();e.currentTarget.classList.remove('drag-over','copy-over');
-  if(!_bdSrc)return;var copy=e.altKey||e.ctrlKey,src=_bdSrc;
-  if(src.id===tId&&src.d===tDay)return;
-  if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));
-  commitCell(tId,tDay,src.code);if(!copy)commitCell(src.id,src.d,'');
-  toast((copy?'📋 Copiato':'↕ Spostato')+': '+(src.code||'vuoto'));renderGrid();
-}
-
-// ── Context menu ─────────────────────────────────────────────────
-var _bdCtx=null,_bdClipboard=null;
-function boardCtxOpen(e,id,d){
-  e.preventDefault();_bdCtx={id,d};
-  var m=document.getElementById('ctxMenu');
-  var p=document.getElementById('ctx-paste');if(p)p.style.display=_bdClipboard?'flex':'none';
-  m.style.left=Math.min(e.clientX,window.innerWidth-170)+'px';
-  m.style.top=Math.min(e.clientY,window.innerHeight-160)+'px';
-  m.style.display='block';
-}
-document.addEventListener('click',function(){document.getElementById('ctxMenu').style.display='none';});
-function boardCtxAction(action){
-  if(!_bdCtx)return;var id=_bdCtx.id,d=_bdCtx.d,code=getCode(id,d);
-  if(action==='edit')spOpenPanel(id,d);
-  else if(action==='copy'){_bdClipboard=code;showKbdHint('📋 Copiato: '+(code||'vuoto'));}
-  else if(action==='paste'&&_bdClipboard!==null){if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));commitCell(id,d,_bdClipboard);renderGrid();}
-  else if(action==='duplicate'&&code){
-    var dow_=dow(YM,d),days=daysInMonth(YM);if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));var n=0;
-    for(var dd=1;dd<=days;dd++){if(dow(YM,dd)===dow_){commitCell(id,dd,code);n++;}}toast('Duplicato su '+n+' giorni');renderGrid();
-  }
-  else if(action==='delete'){if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));commitCell(id,d,'');renderGrid();}
-}
-
-// ── Slide panel (shift editor) ────────────────────────────────────
-var _spCtxSPA=null;
-function spOpenPanel(driverId,day){
-  _spCtxSPA={driverId,day};
-  var dr=state.drivers.find(function(x){return x.id===driverId;});if(!dr)return;
-  var curCode=getCode(driverId,day);
-  document.getElementById('spTitle').textContent=dr.cognome+' '+dr.nome;
-  document.getElementById('spSub').textContent=dowName(YM,day)+' '+fmtDM(YM,day)+' — '+YM;
-  var grid=document.getElementById('spServiceGrid');grid.innerHTML='';
-  groupedCodes().forEach(function(g){
-    g.codes.forEach(function(c){
-      var btn=document.createElement('button');btn.className='sp-service-btn'+(c===curCode?' active':'');
-      btn.style.background='var(--'+g.cls+'-bg)';btn.style.color='var(--'+g.cls+')';
-      btn.textContent=c;btn.title=codeLabel(c);
-      btn.onclick=function(){
-        document.querySelectorAll('.sp-service-btn').forEach(function(b){b.classList.toggle('active',b.textContent===c);});
-        document.getElementById('spCodeInput').value=c;
-      };
-      grid.appendChild(btn);
-    });
-  });
-  document.getElementById('spCodeInput').value=curCode||'';
-  document.getElementById('spNote').value='';
-  var ctr=contracts().find(function(c){return c.code===dr.contratto;});
-  document.getElementById('spDriverInfo').innerHTML='<b>'+esc(dr.filiale)+'</b> · '+esc(dr.service)+' · '+esc(dr.contratto||'—')+(ctr?' ('+ctr.ore+'h)':'');
-  var dSel=document.getElementById('spDriver');
-  dSel.innerHTML=scopedActive().map(function(d){return '<option value="'+d.id+'"'+(d.id===driverId?' selected':'')+'>'+esc(d.cognome)+' '+esc(d.nome)+'</option>';}).join('');
-  document.getElementById('spDay').value=day;document.getElementById('spDay').max=daysInMonth(YM);
-  var conflicts=[];
-  if(curCode&&curCode.toUpperCase()!=='OFF'){var cf=consecutiveFlag(dr);if(Object.keys(cf).length>0)conflicts.push('7+ giorni consecutivi senza riposo');}
-  if(dr.ctrType==='determinato'&&dr.expiry){var exp=new Date(dr.expiry+'T00:00:00'),tgt=new Date(YM+'-'+String(day).padStart(2,'0')+'T00:00:00');if(tgt>exp)conflicts.push('Contratto scaduto il '+fmtDate(dr.expiry));}
-  document.getElementById('spConflicts').innerHTML=conflicts.map(function(c){return '<div class="sp-conflict"><span>⚠️</span><span>'+esc(c)+'</span></div>';}).join('');
-  document.getElementById('slidePanel').classList.add('open');
-  document.getElementById('spBackdrop').style.display='block';
-  setTimeout(function(){document.getElementById('spCodeInput').focus();},230);
-}
-function closePanel(){
-  document.getElementById('slidePanel').classList.remove('open');
-  document.getElementById('spBackdrop').style.display='none';
-  _spCtxSPA=null;
-}
-function boardSpSave(){
-  var ctx=_spCtxSPA;if(!ctx)return;
-  var code=document.getElementById('spCodeInput').value.trim();
-  var resolved=code?resolveCode(code):'';
-  if(code&&resolved===null){toast('Codice non valido: '+code);return;}
-  if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));
-  commitCell(ctx.driverId,ctx.day,resolved||'');
-  closePanel();renderGrid();setSaveState('saving');setTimeout(function(){setSaveState('saved');},800);
-}
-function boardSpDuplicate(){
-  var ctx=_spCtxSPA;if(!ctx)return;
-  var code=resolveCode(document.getElementById('spCodeInput').value.trim());
-  if(!code){toast('Seleziona un codice prima di duplicare');return;}
-  var dow_=dow(YM,ctx.day),days=daysInMonth(YM);
-  if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));
-  var n=0;for(var d=1;d<=days;d++){if(dow(YM,d)===dow_){commitCell(ctx.driverId,d,code);n++;}}
-  dirty();renderGrid();closePanel();toast('Duplicato su '+n+' giorni');
-}
-function boardSpDelete(){
-  var ctx=_spCtxSPA;if(!ctx)return;
-  if(typeof pushUndo==='function')pushUndo(JSON.parse(JSON.stringify(state.schedule)));
-  commitCell(ctx.driverId,ctx.day,'');
-  dirty();renderGrid();closePanel();setSaveState('saved');
-}
-
-// ── Keyboard shortcuts ────────────────────────────────────────────
-document.addEventListener('keydown',function(e){
-  var inInput=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement&&document.activeElement.tagName);
-  if(e.key==='Escape'){
-    closePanel();
-    document.getElementById('ctxMenu').style.display='none';
-    document.querySelectorAll('.overlay.on').forEach(function(o){o.classList.remove('on');});
-  }
-  if(e.ctrlKey&&!e.shiftKey&&e.key==='z'){e.preventDefault();if(typeof doUndo==='function')doUndo();}
-  if(e.ctrlKey&&e.shiftKey&&(e.key==='z'||e.key==='Z')){e.preventDefault();if(typeof doRedo==='function')doRedo();}
-  if(e.ctrlKey&&e.key==='f'){var q=document.getElementById('q');if(q){e.preventDefault();navigate('scheduler');q.focus();q.select();showKbdHint('🔍 Cerca DAS');}}
-  if(e.ctrlKey&&e.key==='s'&&!inInput){e.preventDefault();saveAll(false);setSaveState('saved');showKbdHint('💾 Salvato');}
-});
-
-// ── Dashboard JS (adapted) ────────────────────────────────────────
-
-
-/* ─────────────────────────────────────────────────────────────────
-   TurniDSP Dashboard — unified with platform.css
-   ───────────────────────────────────────────────────────────────── */
-
-// ── Auth guard ────────────────────────────────────────────────────
-if (!(TurniApi.isLoggedIn && TurniApi.isLoggedIn() && TurniApi.user())) {
-  location.replace('login.html');
-}
-TurniApi.startIdleTimeout && TurniApi.startIdleTimeout(30, () => {
-  toast('Sessione scaduta', 'warn'); location.replace('login.html');
-});
-const USER = TurniApi.user();
-
-// ── Helpers ───────────────────────────────────────────────────────
-const $d = id => document.getElementById(id);
-// esc() reused from scheduler core
-const fmt = d => d ? new Date(d).toLocaleDateString('it-IT') : '—';
-const fmtTs = d => d ? new Date(d).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) : '—';
-const today = () => new Date().toISOString().slice(0,10);
-
-// toast() and _toastTimer are defined in scheduler core
-
-function animateCount(el, target) {
-  const dur=600, t0=performance.now();
-  const step=t=>{ const p=Math.min((t-t0)/dur,1); el.textContent=Math.round(target*p); if(p<1)requestAnimationFrame(step); };
-  requestAnimationFrame(step);
-}
-
-// ── animateCount: used by KPI cards to count up to their value ────
-// ── Init sidebar user info ────────────────────────────────────────
-function initSidebarUser() {
-  const name = USER.full_name || USER.username || '—';
-  const initials = name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
-  $d('navAvatar').textContent = initials;
-  $d('navUname').textContent  = name;
-  $d('navRole').textContent   = { admin:'Amministratore', osm:'OSM', hr_manager:'HR Manager', team_leader:'Team Leader' }[USER.role] || USER.role;
-  if(USER.role==='admin') document.body.classList.add('is-admin');
-}
-
-function doLogout() { TurniApi.logout().catch(()=>{}); location.replace('login.html'); }
-
-// ── Greeting ──────────────────────────────────────────────────────
-function setGreeting() {
-  const h = new Date().getHours();
-  const g = h<12?'Buongiorno':h<18?'Buon pomeriggio':'Buonasera';
-  $d('pageTitle').textContent = g + ', ' + (USER.full_name||USER.username);
-  $d('pageSub').textContent = new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-}
-
-// ── Data loading ──────────────────────────────────────────────────
-let _kpiData=null, _branches=[], _charts={};
-
-async function initBranches() {
-  try {
-    _branches = await TurniApi.branches();
-    const sel = $d('branchSel');
-    sel.innerHTML = '<option value="">Tutte le filiali</option>' +
-      _branches.map(b=>`<option value="${esc(b.code)}">${esc(b.code)}</option>`).join('');
-    sel.addEventListener('change', refreshOverview);
-
-    const nuBranches = $d('nuBranches');
-    if(nuBranches) nuBranches.innerHTML = _branches.map(b=>`<option value="${b.id}">${esc(b.code)} — ${esc(b.name)}</option>`).join('');
-  } catch(e) { console.error('branches:', e.message); }
-}
-
-async function refreshOverview() {
-  const date   = $d('kpiDate').value || today();
-  const branch = $d('branchSel').value || undefined;
-  $d('dspDateLabel').textContent = fmt(date);
-  $d('fcBadge').textContent = fmt(date);
-
-  try {
-    _kpiData = await TurniApi.kpi({ date, ...(branch?{branch}:{}) });
-    renderKPIs(_kpiData);
-    renderForecastCard(_kpiData);
-    renderExpiryCard(_kpiData);
-    renderAttendanceCard(_kpiData);
-    renderDSP(_kpiData);
-  } catch(e) { toast('Errore KPI: '+e.message,'bad'); console.error(e); }
-
-  loadAlerts();
-  renderActivity();
-}
-
-// ── KPI Cards ─────────────────────────────────────────────────────
-function renderKPIs(d) {
-  const dr  = d.drivers   || {};
-  const fc  = d.forecast  || {};
-  const att = d.attendance || {};
-  const ex  = d.contracts  || {};
-
-  const pct = dr.total ? Math.round(dr.present/dr.total*100) : 0;
-  const fcOk = fc.delta >= 0;
-  const exBad = (ex.in_7||0)+(ex.expired||0);
-
-  const cards = [
-    { cls:'pri',  icon:'👷', label:'Driver totali',
-      value: dr.total||0,
-      subs: [{l:'Presenti',v:dr.present||0},{l:'Assenti',v:dr.absent||0},{l:'In riposo',v:dr.on_leave||0}],
-      bar: pct, barColor:'var(--brand)', delta: pct+'% presenti' },
-    { cls: fcOk?'ok':'bad', icon:'🎯', label:'Forecast vs Pianificato',
-      value: fc.planned||0,
-      subs: [{l:'Forecast',v:fc.forecast||0},{l:'Delta',v:(fc.delta>0?'+':'')+(fc.delta||0)}],
-      delta: (fc.delta_pct>0?'▲':'▼')+' '+Math.abs(fc.delta_pct||0)+'%',
-      deltaOk: fcOk },
-    { cls: exBad>0?'warn':'ok', icon:'📋', label:'Contratti in scadenza',
-      value: ex.in_30||0,
-      subs: [{l:'Scaduti',v:ex.expired||0},{l:'7 gg',v:ex.in_7||0},{l:'15 gg',v:ex.in_15||0}],
-      delta: '30 giorni' },
-    { cls:'teal', icon:'🏥', label:'Assenze oggi',
-      value: (att.absent||0)+(att.medical||0)+(att.vacation||0),
-      subs: [{l:'Malattia',v:att.medical||0},{l:'Ferie',v:att.vacation||0},{l:'Assenti',v:att.absent||0}],
-      delta: (att.training||0)>0 ? att.training+' in formazione' : '' },
-  ];
-
-  $d('kpiGrid').innerHTML = cards.map((c,i)=>`
-    <div class="kpi-card ${c.cls} fade-in fade-in-${i}">
-      <div class="kpi-icon">${c.icon}</div>
-      <div class="kpi-val" data-target="${c.value}">${c.value}</div>
-      <div class="kpi-label">${c.label}</div>
-      <div class="kpi-subs">
-        ${c.subs.map(s=>`<div class="kpi-sub"><span class="sl">${s.l}</span><span class="sv">${s.v}</span></div>`).join('')}
-      </div>
-      ${c.bar!==undefined?`<div class="kpi-bar"><div class="kpi-fill" style="width:${c.bar}%;background:${c.barColor}"></div></div>`:''}
-      ${c.delta?`<div class="text-xs text-muted mt-2">${c.delta}</div>`:''}
-    </div>`).join('');
-
-  $d('kpiGrid').querySelectorAll('.kpi-val').forEach(el => {
-    const t = +el.dataset.target; if(t) animateCount(el, t);
-  });
-}
-
-function renderForecastCard(d) {
-  const fc = d.forecast||{};
-  const ok = fc.delta>=0;
-  const pct = fc.forecast ? Math.min(100, Math.round(fc.planned/fc.forecast*100)) : 0;
-  $d('fcContent').innerHTML = `
-    <div class="flex gap-4" style="margin-bottom:10px">
-      <div><div class="text-xs text-muted">Forecast</div><div style="font-size:1.6rem;font-weight:800">${fc.forecast||0}</div></div>
-      <div><div class="text-xs text-muted">Pianificati</div><div style="font-size:1.6rem;font-weight:800">${fc.planned||0}</div></div>
-      <div><div class="text-xs text-muted">Delta</div><div style="font-size:1.6rem;font-weight:800;color:${ok?'var(--ok)':'var(--bad)'}">${fc.delta>0?'+':''}${fc.delta||0}</div></div>
-    </div>
-    <div class="prog-wrap" style="height:7px"><div class="prog-bar" style="width:${pct}%;background:${ok?'var(--ok)':'var(--bad)'}"></div></div>
-    <div class="text-xs text-muted mt-2">${pct}% rispetto al forecast</div>`;
-}
-
-function renderExpiryCard(d) {
-  const ex = d.contracts||{};
-  $d('expiryContent').innerHTML = [
-    [ex.expired||0,'Scaduti','bad'],
-    [ex.in_7||0,'Entro 7 giorni','bad'],
-    [ex.in_15||0,'Entro 15 giorni','warn'],
-    [ex.in_30||0,'Entro 30 giorni','muted'],
-  ].map(([n,l,c])=>`<div class="dash-expiry-row">
-    <div class="dash-expiry-num" style="color:var(--${c==='bad'?'bad':c==='warn'?'warn':'muted'})">${n}</div>
-    <div><div class="font-semi text-sm">${l}</div></div>
-  </div>`).join('');
-}
-
-function renderAttendanceCard(d) {
-  const a = d.attendance||{};
-  const tot = (a.present||0)+(a.absent||0)+(a.medical||0)+(a.vacation||0)+(a.training||0)||1;
-  const pct = n => Math.round(n/tot*100);
-  const row = (label,val,color) => `
-    <div class="dash-presence-row">
-      <div class="dash-pl">${label}</div>
-      <div class="prog-wrap flex-1" style="height:7px"><div class="prog-bar" style="width:${pct(val)}%;background:${color}"></div></div>
-      <div class="text-sm font-semi" style="width:28px;text-align:right">${val}</div>
-    </div>`;
-  $d('attContent').innerHTML = [
-    row('Presenti',    a.present||0,  'var(--ok)'),
-    row('Assenti',     a.absent||0,   'var(--bad)'),
-    row('Malattia',    a.medical||0,  'var(--warn)'),
-    row('Ferie',       a.vacation||0, 'var(--brand)'),
-    row('Formazione',  a.training||0, 'var(--teal)'),
-  ].join('');
-}
-
-function renderDSP(kpiData) {
-  const tbody = $d('dspTbl').querySelector('tbody');
-  const dsp = kpiData?.dsp;
-  if(!dsp||!dsp.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-muted" style="padding:16px;text-align:center">Nessun dato — aggiungi DAS nello Scheduler</td></tr>';
-    return;
-  }
-  let totD=0,totP=0;
-  tbody.innerHTML = dsp.map(r=>{
-    totD+=(r.drivers||0); totP+=(r.present||0);
-    const cov = r.drivers>0 ? Math.round(r.present/r.drivers*100) : 0;
-    return `<tr class="dsp-row" style="cursor:pointer" onclick="focusBranchInBoard('${esc(r.branch_code||'')}')" title="Filtra il planner su questa filiale">
-      <td><b>${esc(r.branch_code||'—')}</b></td>
-      <td>${r.drivers||0}</td>
-      <td class="text-ok font-semi">${r.present||0}</td>
-      <td>
-        <div class="flex items-center gap-2">
-          <div class="prog-wrap" style="height:6px;width:70px">
-            <div class="prog-bar" style="width:${cov}%;background:${cov>=80?'var(--ok)':cov>=50?'var(--warn)':'var(--bad)'}"></div>
-          </div>
-          <span class="text-xs">${cov}%</span>
-        </div>
-      </td>
-    </tr>`;
-  }).join('') + `<tr style="border-top:2px solid var(--line)">
-    <td><b>Totale</b></td><td><b>${totD}</b></td>
-    <td class="text-ok font-semi"><b>${totP}</b></td>
-    <td><b>${totD>0?Math.round(totP/totD*100):0}%</b></td>
-  </tr>`;
-}
-
-// Click a DSP/branch row in the overview → filter the board to that branch
-function focusBranchInBoard(branchCode) {
-  if (_currentSection !== 'scheduler') navigate('scheduler');
-  const fFiliale = document.getElementById('fFiliale');
-  if (fFiliale && branchCode) { fFiliale.value = branchCode; renderGrid(); }
-  const board = document.getElementById('boardOuter');
-  if (board) board.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-async function loadAlerts() {
-  try {
-    const rows = await TurniApi.expiryAlerts(60);
-    const tbody = $d('alertsTbl').querySelector('tbody');
-    if(!rows.length) { tbody.innerHTML='<tr><td colspan="5" class="text-muted" style="padding:12px;text-align:center">Nessuna scadenza nei prossimi 60 giorni</td></tr>'; return; }
-    tbody.innerHTML = rows.slice(0,25).map(r=>`<tr class="dsp-row" style="cursor:pointer" onclick="focusEmployeeInBoard('${esc(r.full_name||'')}')" title="Trova questo dipendente nel planner">
-      <td><b>${esc(r.full_name||'—')}</b></td>
-      <td>${esc(r.alert_type||'—')}</td>
-      <td>${fmt(r.expiry_date)}</td>
-      <td>${r.days_left<0?'Scaduto':r.days_left+' gg'}</td>
-      <td><span class="badge ${r.level==='overdue'||r.level==='critical'?'b-bad':r.level==='warning'?'b-warn':'b-pri'}">${esc(r.level)}</span></td>
-    </tr>`).join('');
-  } catch(e) { $d('alertsTbl').querySelector('tbody').innerHTML=`<tr><td colspan="5" class="text-muted">${esc(e.message)}</td></tr>`; }
-}
-
-// Click an expiry/alert row in the overview → search for that employee in the board
-function focusEmployeeInBoard(fullName) {
-  if (_currentSection !== 'scheduler') navigate('scheduler');
-  const q = document.getElementById('q');
-  if (q && fullName) { q.value = fullName.split(' ')[0]; renderGrid(); }
-  const board = document.getElementById('boardOuter');
-  if (board) board.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// ── Activity feed ─────────────────────────────────────────────────
-async function renderActivity() {
-  const icons = {create:'➕',update:'✏️',delete:'🗑',login:'🔐',logout:'🚪'};
-  const colors = {create:'var(--ok-bg)',update:'var(--brand-lt)',delete:'var(--bad-bg)',login:'var(--teal-bg)'};
-  try {
-    const data = _kpiData?.activity || await TurniApi.audit({limit:20});
-    $d('activityList').innerHTML = (data||[]).map(r=>{
-      const a = r.action||'';
-      return `<div class="feed-item">
-        <div class="feed-icon" style="background:${colors[a]||'var(--bg2)'}">${icons[a]||'⚡'}</div>
-        <div><div class="feed-text">${esc(r.detail||(r.entity+' · '+r.action))}</div>
-        <div class="feed-meta">${esc(r.username||'—')} · ${fmtTs(r.ts)}</div></div>
-      </div>`;
-    }).join('') || '<div class="text-muted text-sm">Nessuna attività</div>';
-  } catch(e) { $d('activityList').innerHTML=`<div class="text-muted text-sm">${esc(e.message)}</div>`; }
-}
-
-// ── Charts ────────────────────────────────────────────────────────
-function destroyChart(id) { if(_charts[id]){_charts[id].destroy();delete _charts[id];} }
-
-function chartOpts() {
-  return {
-    responsive:true, maintainAspectRatio:false,
-    plugins:{legend:{display:false}, tooltip:{mode:'index',intersect:false}},
-    scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}}}
-  };
-}
-
-async function renderCharts() {
-  const d = _kpiData || await TurniApi.kpi({date:$d('kpiDate').value||today()}).catch(()=>null);
-  if(!d) return;
-
-  destroyChart('chartAtt');
-  if(d.attendance_trend?.length) {
-    _charts.chartAtt = new Chart($d('chartAtt'), {
-      type:'bar',
-      data:{
-        labels: d.attendance_trend.map(r=>r.d.slice(5)),
-        datasets:[
-          {label:'Presenti', data:d.attendance_trend.map(r=>r.present), backgroundColor:'rgba(5,150,105,.75)', borderRadius:4},
-          {label:'Assenti',  data:d.attendance_trend.map(r=>r.absent),  backgroundColor:'rgba(220,38,38,.55)', borderRadius:4},
-        ]
-      },
-      options:{...chartOpts(), plugins:{...chartOpts().plugins, legend:{display:true,position:'top',labels:{font:{size:12}}}}}
-    });
-  }
-
-  destroyChart('chartFc');
-  if(d.forecast_trend?.length) {
-    _charts.chartFc = new Chart($d('chartFc'), {
-      type:'line',
-      data:{
-        labels: d.forecast_trend.map(r=>r.d.slice(5)),
-        datasets:[
-          {label:'Forecast',   data:d.forecast_trend.map(r=>r.forecast), borderColor:'var(--brand)',backgroundColor:'rgba(79,70,229,.1)',tension:.4,fill:true,pointRadius:3},
-          {label:'Pianificati',data:d.forecast_trend.map(r=>r.planned),  borderColor:'var(--ok)',   backgroundColor:'rgba(5,150,105,.05)', tension:.4,fill:false,pointRadius:3},
-        ]
-      },
-      options:{...chartOpts(), plugins:{...chartOpts().plugins, legend:{display:true,position:'top',labels:{font:{size:12}}}}}
-    });
-  }
-
-  destroyChart('chartAbs');
-  if(d.absence_types?.length) {
-    const palette=['var(--brand)','var(--ok)','var(--warn)','var(--bad)','var(--purple)','var(--teal)','#F59E0B','#6B7280'];
-    _charts.chartAbs = new Chart($d('chartAbs'), {
-      type:'doughnut',
-      data:{labels:d.absence_types.map(r=>r.absence_type), datasets:[{data:d.absence_types.map(r=>r.cnt), backgroundColor:palette, borderWidth:0}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12},padding:10}}}}
-    });
-  }
-
-  destroyChart('chartGrow');
-  if(d.employee_growth?.length) {
-    _charts.chartGrow = new Chart($d('chartGrow'), {
-      type:'bar',
-      data:{labels:d.employee_growth.map(r=>r.month), datasets:[{label:'Nuovi',data:d.employee_growth.map(r=>r.added),backgroundColor:'rgba(79,70,229,.75)',borderRadius:6}]},
-      options:chartOpts()
-    });
-  }
-}
-
-// ── Notifications ─────────────────────────────────────────────────
-let _notifOpen=false;
-async function loadNotifications() {
-  try {
-    const data = await TurniApi.notifications({limit:30});
-    const badge=$d('notifBadge');
-    if(data.unread_count>0){ badge.style.display='inline-block'; badge.textContent=data.unread_count>99?'99+':data.unread_count; }
-    else badge.style.display='none';
-    const sevColors={critical:'var(--bad)',warning:'var(--warn)',info:'var(--brand)'};
-    $d('notifList').innerHTML = data.rows.length
-      ? data.rows.map(n=>`<div class="ph-notif-item${n.read_at?'':' unread'}" onclick="clickNotif(${n.id},'${esc(n.action_url||'')}')">
-          <div class="ph-notif-title">
-            <span class="ph-notif-sev-dot" style="background:${sevColors[n.severity]||'var(--brand)'}"></span>
-            ${esc(n.title||'')}
-          </div>
-          ${n.body?`<div class="ph-notif-body">${esc(n.body)}</div>`:''}
-          <div class="ph-notif-ts">${fmtTs(n.created_at)}</div>
-        </div>`).join('')
-      : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--text-muted)">Nessuna notifica</div>';
-  } catch {}
-}
-// clickNotif() defined in SPA layer below
-// markAllRead() defined in SPA layer below
-function toggleNotif() {
-  _notifOpen=!_notifOpen;
-  $d('notifPanel').style.display=_notifOpen?'block':'none';
-  if(_notifOpen) loadNotifications();
-}
-document.addEventListener('click',e=>{
-  if(_notifOpen&&!e.target.closest('#notifPanel')&&!e.target.closest('.ph-notif-btn')){_notifOpen=false;$d('notifPanel').style.display='none';}
-  if($d('searchDd').style.display!=='none'&&!e.target.closest('.ph-search')) $d('searchDd').style.display='none';
-});
-
-// ── Global search ─────────────────────────────────────────────────
-let _srTimer=null;
-function debouncedSearch(q) {
-  clearTimeout(_srTimer);
-  if(!q||q.length<2){$d('searchDd').style.display='none';return;}
-  _srTimer=setTimeout(()=>doSearch(q),280);
-}
-async function doSearch(q) {
-  const dd=$d('searchDd'); dd.style.display='block';
-  dd.innerHTML='<div class="sd-item text-muted" style="pointer-events:none">Ricerca…</div>';
-  try {
-    const r=await TurniApi.search(q,12);
-    const icons={employee:'👤',document:'📄',absence:'🏥'};
-    dd.innerHTML=r.results.length
-      ? r.results.map(x=>`<a href="${esc(x.url||'#')}" class="sd-item">
-          <span class="sd-icon">${icons[x.type]||'📌'}</span>
-          <div class="flex-1"><div class="sd-title">${esc(x.title)}</div><div class="sd-sub">${esc(x.subtitle||'')}</div></div>
-          <span class="sd-type">${x.type}</span>
-        </a>`).join('')
-      : '<div class="sd-item text-muted" style="pointer-events:none">Nessun risultato</div>';
-  } catch { dd.innerHTML='<div class="sd-item text-muted" style="pointer-events:none">Errore ricerca</div>'; }
-}
-
-// ── Users management ──────────────────────────────────────────────
-// loadUsers() defined in SPA layer below
-// createUser() defined in SPA layer below
-// toggleUser() defined in SPA layer below
-// resetPw() defined in SPA layer below
-
-// ── Excel/PDF links ───────────────────────────────────────────────
-function wireTools() {
-  const ym=new Date().toISOString().slice(0,7);
-  const addDays=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
-  $d('tplEmp').href   = TurniApi.xlsxTemplateUrl('employees');
-  $d('tplFc').href    = TurniApi.xlsxTemplateUrl('forecast');
-  $d('tplSch').href   = TurniApi.xlsxTemplateUrl('schedule');
-  $d('expEmp').href   = TurniApi.xlsxExportUrl('employees');
-  $d('expFc').href    = TurniApi.xlsxExportUrl('forecast',{month:ym});
-  $d('expSch').href   = TurniApi.xlsxExportUrl('schedule',{month:ym});
-  $d('pdfWeek').href  = TurniApi.pdfUrl('schedule/weekly',{from:addDays(today(),-6)});
-  $d('pdfMonth').href = TurniApi.pdfUrl('schedule/monthly',{month:ym});
-  $d('pdfAbs').href   = TurniApi.pdfUrl('absences',{month:ym});
-}
-
-// ── Boot ──────────────────────────────────────────────────────────
-async function bootWorkspaceOverview() {
-  initSidebarUser();
-  setGreeting();
-  $d('kpiDate').value = today();
-  $d('kpiDate').addEventListener('change', refreshOverview);
-  await initBranches();
-  wireTools();
-  refreshOverview();
-  loadNotifications();
-  TurniApi.refreshNotifications && TurniApi.refreshNotifications().catch(()=>{});
-  setInterval(loadNotifications, 5*60*1000);
-  $d('navSync').textContent = '🟢 PostgreSQL';
-}
-// bootWorkspaceOverview() called once when the workspace first mounts
-
-
-// ── Report charts (separate canvases in reports section) ──────────
-var _rptCharts = {};
-async function renderReportCharts() {
-  var d;
-  try { d = await TurniApi.kpi({ date: new Date().toISOString().slice(0,10) }); } catch(e) { return; }
-  function destroy(id){ if(_rptCharts[id]){_rptCharts[id].destroy();delete _rptCharts[id];} }
-  var opts = { responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false}},
-    scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,font:{size:11}}},
-            y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}}}
-  };
-  if(d.attendance_trend && d.attendance_trend.length){
-    destroy('rptChartAtt');
-    _rptCharts.rptChartAtt = new Chart(document.getElementById('rptChartAtt'),{
-      type:'bar',
-      data:{labels:d.attendance_trend.map(r=>r.d.slice(5)),
-            datasets:[{label:'Presenti',data:d.attendance_trend.map(r=>r.present),backgroundColor:'rgba(5,150,105,.75)',borderRadius:4},
-                      {label:'Assenti', data:d.attendance_trend.map(r=>r.absent), backgroundColor:'rgba(220,38,38,.55)',borderRadius:4}]},
-      options:{...opts,plugins:{...opts.plugins,legend:{display:true,position:'top',labels:{font:{size:12}}}}}
-    });
-  }
-  if(d.forecast_trend && d.forecast_trend.length){
-    destroy('rptChartFc');
-    _rptCharts.rptChartFc = new Chart(document.getElementById('rptChartFc'),{
-      type:'line',
-      data:{labels:d.forecast_trend.map(r=>r.d.slice(5)),
-            datasets:[{label:'Forecast',data:d.forecast_trend.map(r=>r.forecast),borderColor:'var(--brand)',backgroundColor:'rgba(79,70,229,.1)',tension:.4,fill:true,pointRadius:3},
-                      {label:'Pianif.', data:d.forecast_trend.map(r=>r.planned), borderColor:'var(--ok)',  backgroundColor:'rgba(5,150,105,.05)',tension:.4,fill:false,pointRadius:3}]},
-      options:{...opts,plugins:{...opts.plugins,legend:{display:true,position:'top',labels:{font:{size:12}}}}}
-    });
-  }
-  if(d.absence_types && d.absence_types.length){
-    destroy('rptChartAbs');
-    _rptCharts.rptChartAbs = new Chart(document.getElementById('rptChartAbs'),{
-      type:'doughnut',
-      data:{labels:d.absence_types.map(r=>r.absence_type),
-            datasets:[{data:d.absence_types.map(r=>r.cnt),backgroundColor:['var(--brand)','var(--ok)','var(--warn)','var(--bad)','var(--purple)','var(--teal)','#F59E0B','#6B7280'],borderWidth:0}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:12},padding:10}}}}
-    });
-  }
-  if(d.employee_growth && d.employee_growth.length){
-    destroy('rptChartGrow');
-    _rptCharts.rptChartGrow = new Chart(document.getElementById('rptChartGrow'),{
-      type:'bar',
-      data:{labels:d.employee_growth.map(r=>r.month),
-            datasets:[{label:'Nuovi',data:d.employee_growth.map(r=>r.added),backgroundColor:'rgba(79,70,229,.75)',borderRadius:6}]},
-      options:opts
-    });
-  }
-  // Wire export links
-  var ym = new Date().toISOString().slice(0,7);
-  var rptExpEmp = document.getElementById('rptExpEmp'); if(rptExpEmp) rptExpEmp.href = TurniApi.xlsxExportUrl('employees');
-  var rptExpFc  = document.getElementById('rptExpFc');  if(rptExpFc)  rptExpFc.href  = TurniApi.xlsxExportUrl('forecast',{month:ym});
-  var rptExpSch = document.getElementById('rptExpSch'); if(rptExpSch) rptExpSch.href = TurniApi.xlsxExportUrl('schedule',{month:ym});
-  var addDays=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
-  var rptPdfMonth = document.getElementById('rptPdfMonth'); if(rptPdfMonth) rptPdfMonth.href = TurniApi.pdfUrl('schedule/monthly',{month:ym});
-  var rptPdfAbs   = document.getElementById('rptPdfAbs');   if(rptPdfAbs)   rptPdfAbs.href   = TurniApi.pdfUrl('absences',{month:ym});
-}
-
-// ── Global search ─────────────────────────────────────────────────
-var _gSearchTimer = null;
-function debouncedGlobalSearch(q) {
-  clearTimeout(_gSearchTimer);
-  if(!q||q.length<2){document.getElementById('searchDropdown').style.display='none';return;}
-  _gSearchTimer = setTimeout(function(){doGlobalSearch(q);}, 280);
-}
-async function doGlobalSearch(q) {
-  var dd = document.getElementById('searchDropdown');
-  dd.style.display = 'block';
-  dd.innerHTML = '<div class="sd-item" style="pointer-events:none;color:var(--text-muted)">Ricerca…</div>';
-  try {
-    var r = await TurniApi.search(q, 12);
-    var icons = {employee:'👤',document:'📄',absence:'🏥'};
-    dd.innerHTML = r.results.length
-      ? r.results.map(function(x){
-          return '<a href="'+esc(x.url||'#')+'" class="sd-item">'+
-            '<span class="sd-icon">'+(icons[x.type]||'📌')+'</span>'+
-            '<div class="flex-1"><div class="sd-title">'+esc(x.title)+'</div><div class="sd-sub">'+esc(x.subtitle||'')+'</div></div>'+
-            '<span class="sd-type">'+x.type+'</span></a>';
-        }).join('')
-      : '<div class="sd-item" style="pointer-events:none;color:var(--text-muted)">Nessun risultato</div>';
-  } catch {
-    dd.innerHTML = '<div class="sd-item" style="pointer-events:none;color:var(--bad)">Errore ricerca</div>';
-  }
-}
-
-// ── Notifications ─────────────────────────────────────────────────
-_notifOpen = false;
-async function loadNotifPanel() {
-  try {
-    var data = await TurniApi.notifications({limit:30});
-    var badge = document.getElementById('notifBadge');
-    if(data.unread_count>0){badge.style.display='inline-block';badge.textContent=data.unread_count>99?'99+':data.unread_count;}
-    else badge.style.display='none';
-    var sevC={critical:'var(--bad)',warning:'var(--warn)',info:'var(--brand)'};
-    document.getElementById('notifList').innerHTML = data.rows.length
-      ? data.rows.map(function(n){
-          return '<div class="ph-notif-item'+(n.read_at?'':' unread')+'" onclick="clickNotif('+n.id+',\''+esc(n.action_url||'')+'\')">'+
-            '<div class="ph-notif-title"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+(sevC[n.severity]||'var(--brand)')+';margin-right:4px;vertical-align:middle"></span>'+esc(n.title||'')+'</div>'+
-            (n.body?'<div class="ph-notif-body">'+esc(n.body)+'</div>':'')+
-            '<div class="ph-notif-ts">'+fmtTs(n.created_at)+'</div></div>';
-        }).join('')
-      : '<div style="padding:20px;text-align:center;font-size:.8rem;color:var(--text-muted)">Nessuna notifica</div>';
-  } catch {}
-}
-async function clickNotif(id,url){try{await TurniApi.markRead(id);}catch{} if(url)location.href=url;else toggleNotifPanel();loadNotifPanel();}
-async function markAllRead(){try{await TurniApi.markAllRead();loadNotifPanel();}catch{}}
-function toggleNotifPanel(){
-  _notifOpen=!_notifOpen;
-  document.getElementById('notifPanel').style.display=_notifOpen?'block':'none';
-  if(_notifOpen) loadNotifPanel();
-}
-document.addEventListener('click',function(e){
-  if(_notifOpen&&!e.target.closest('#notifPanel')&&!e.target.closest('.ph-notif-btn')){_notifOpen=false;document.getElementById('notifPanel').style.display='none';}
-  if(document.getElementById('searchDropdown').style.display!=='none'&&!e.target.closest('.ph-search')) document.getElementById('searchDropdown').style.display='none';
-});
-
-// ── User management ───────────────────────────────────────────────
-async function loadUsers(){
-  try{
-    var rows=await TurniApi.users();
-    var rl=function(r){return {admin:'Admin',osm:'OSM',hr_manager:'HR Manager',team_leader:'Team Leader'}[r]||r;};
-    var fmtTs2=function(d){return d?new Date(d).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}):'—';};
-    document.getElementById('usersTbl').innerHTML='<thead><tr><th>Username</th><th>Nome</th><th>Ruolo</th><th>Stato</th><th>Ultimo accesso</th><th></th></tr></thead><tbody>'+
-      rows.map(function(u){return '<tr><td><b>'+esc(u.username)+'</b></td><td>'+esc(u.full_name||'')+'</td>'+
-        '<td>'+rl(u.role)+'</td>'+
-        '<td><span class="badge '+(u.active?'b-ok':'b-warn')+'">'+(u.active?'attivo':'disattivo')+'</span></td>'+
-        '<td style="font-size:.78rem;color:var(--text-muted)">'+fmtTs2(u.last_login)+'</td>'+
-        '<td style="display:flex;gap:5px"><button class="btn ghost sm" onclick="toggleUser('+u.id+','+!u.active+')">'+(u.active?'Disattiva':'Attiva')+'</button>'+
-        '<button class="btn ghost sm" onclick="resetPw('+u.id+')">Reset pw</button></td></tr>';
-      }).join('')+'</tbody>';
-  } catch(e){document.getElementById('usersTbl').innerHTML='<tbody><tr><td class="text-muted">'+esc(e.message)+'</td></tr></tbody>';}
-}
-async function createUser(){
-  var $m=document.getElementById('nuMsg');$m.textContent='';
-  var branch_ids=Array.from(document.getElementById('nuBranches').selectedOptions).map(function(o){return +o.value;});
-  var payload={username:document.getElementById('nuUser').value.trim(),password:document.getElementById('nuPass').value,full_name:document.getElementById('nuName').value.trim(),role:document.getElementById('nuRole').value,branch_ids:branch_ids};
-  if(!payload.username||!payload.password){$m.style.color='var(--bad)';$m.textContent='Username e password obbligatori.';return;}
-  try{await TurniApi.createUser(payload);$m.style.color='var(--ok)';$m.textContent='Account creato.';document.getElementById('nuUser').value='';document.getElementById('nuPass').value='';document.getElementById('nuName').value='';loadUsers();}
-  catch(e){$m.style.color='var(--bad)';$m.textContent=e.message;}
-}
-async function toggleUser(id,active){try{await TurniApi.updateUser(id,{active});toast(active?'Utente attivato':'Disattivato');loadUsers();}catch(e){toast(e.message,'bad');}}
-async function resetPw(id){var pw=prompt('Nuova password:');if(!pw)return;try{await TurniApi.updateUser(id,{password:pw});toast('Password aggiornata');}catch(e){toast(e.message,'bad');}}
-
-// ── Init: boot dashboard on start, handle hash ────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  // The workspace (scheduler + overview strip) is the single home screen.
-  // Wire tools after a tick (TurniApi is available)
-  setTimeout(function() {
-    try {
-      var ym = new Date().toISOString().slice(0,7);
-      var addDays = function(iso,n){var d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
-      var tplEmp=document.getElementById('tplEmp');if(tplEmp) tplEmp.href=TurniApi.xlsxTemplateUrl('employees');
-    } catch(e) {}
-  }, 100);
-
-  // Deep-link support. #dashboard is kept as a legacy alias that now
-  // simply resolves to the scheduler workspace, since Dashboard lives
-  // inside it as the overview strip rather than as its own route.
-  var hash = location.hash.replace('#','');
-  if (hash === 'dashboard') hash = 'scheduler';
-  var known = ['scheduler','employees','reports','settings'];
-  navigate(known.includes(hash) ? hash : 'scheduler');
-
-  // Refresh notifications periodically
-  loadNotifPanel();
-  TurniApi.refreshNotifications && TurniApi.refreshNotifications().catch(function(){});
-  setInterval(loadNotifPanel, 5*60*1000);
-
-  // Set navSync
-  document.getElementById('navSync').textContent = '🟢 PostgreSQL';
-});
-
-
+  ensureTeamFiliale();applyRole();refreshFilSelects();refreshAll();})();
 </script>
+
 </body>
 </html>

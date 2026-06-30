@@ -108,6 +108,8 @@ const FRONT = path.resolve(__dirname, '../frontend');
 app.use(express.static(FRONT, { index: false }));   // don't auto-serve index.html at '/'
 
 app.get('/', (_req, res) => res.sendFile(path.join(FRONT, 'login.html')));
+// SPA entry point — replaces the old multi-page scheduler/dashboard split
+app.get('/app', (_req, res) => res.sendFile(path.join(FRONT, 'app.html')));
 
 // fallback: unknown non-API routes go to the login page
 app.get('*', (_req, res) => res.sendFile(path.join(FRONT, 'login.html')));

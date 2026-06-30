@@ -1353,5 +1353,8 @@ table.grid tr.empty td { padding:24px;text-align:center;color:var(--text-muted);
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .page-pad { padding: 14px; }
+<<<<<<< HEAD
   .overview-alert-row { grid-template-columns: 1fr; }
+=======
+>>>>>>> 1ae7849a23ab5764c576ad6c149826e114dd96df
 }

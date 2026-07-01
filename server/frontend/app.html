@@ -56,15 +56,15 @@
       <span class="nav-item-icon">🗓</span>Workspace
     </button>
     <button class="nav-item" data-section="employees" onclick="navigate('employees')">
-      <span class="nav-item-icon">👥</span>Dipendenti
+      <span class="nav-item-icon">👥</span>People
     </button>
     <button class="nav-item" data-section="reports" onclick="navigate('reports')">
-      <span class="nav-item-icon">📈</span>Report &amp; Analytics
+      <span class="nav-item-icon">📈</span>Analytics
     </button>
 
     <div class="nav-section-label adminonly">Admin</div>
     <button class="nav-item adminonly" data-section="settings" onclick="navigate('settings')">
-      <span class="nav-item-icon">⚙</span>Impostazioni
+      <span class="nav-item-icon">⚙</span>Settings
     </button>
 
     <!-- Scheduler sub-nav (visible only when scheduler is active) -->
@@ -153,7 +153,7 @@
            Dashboard is now the top section of this single workspace,
            not a separate page. Everything below shares one scroll
            container, one state, one header, one sidebar. ══════════ -->
-      <div class="spa-section active page-scroll" id="sec-scheduler">
+      <div class="spa-section active" id="sec-scheduler">
 
         <!-- ── Workspace overview strip: KPIs · Alerts · Activity ──
              Collapsible. Lives above the toolbar so it's always the
@@ -201,6 +201,26 @@
               <div class="card card-pad">
                 <div class="section-head"><span class="section-title">⚡ Attività recente</span></div>
                 <div id="activityList" class="feed-list"><div class="skel" style="height:80px;border-radius:8px"></div></div>
+              </div>
+            </div>
+
+            <!-- Trend charts — render via the existing renderCharts(), reusing _kpiData -->
+            <div class="charts-grid" style="margin-bottom:20px">
+              <div class="chart-card" style="grid-column:span 2">
+                <div class="chart-title">Presenze ultimi 30 giorni</div>
+                <div style="height:200px"><canvas id="chartAtt"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">Forecast vs Pianificato (30 gg)</div>
+                <div style="height:200px"><canvas id="chartFc"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">Tipi di assenza (90 gg)</div>
+                <div style="height:200px"><canvas id="chartAbs"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">Crescita dipendenti (12 mesi)</div>
+                <div style="height:200px"><canvas id="chartGrow"></canvas></div>
               </div>
             </div>
 
@@ -260,7 +280,7 @@
         </div>
 
         <!-- Scheduler view container -->
-        <div id="schedulerBoard" style="height:calc(100vh - var(--header-h) - var(--toolbar-h));min-height:500px;display:flex;flex-direction:column;flex-shrink:0">
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
           <!-- Planning board -->
           <div class="sch-view on" id="v-plan">
             <div class="adminonly" id="autoBanner" style="display:none;background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px 16px;font-size:.8rem"></div>
@@ -394,23 +414,49 @@
         </div>
       </div><!-- /sec-scheduler -->
 
-      <!-- ══ EMPLOYEES ══════════════════════ -->
-      <div class="spa-section page-scroll" id="sec-employees" style="padding:22px 24px">
-        <div class="page-head">
-          <div>
-            <div class="page-title">👥 Dipendenti</div>
-            <div class="page-sub">Anagrafica, contratti, documenti</div>
+      <!-- ══ PEOPLE ══════════════════════════ -->
+      <div class="spa-section" id="sec-employees" style="flex-direction:row">
+        <!-- People list sidebar -->
+        <aside class="people-sidebar" id="peopleSidebar">
+          <div class="people-sidebar-head">
+            <div class="people-sidebar-search">
+              <span>🔍</span>
+              <input id="empSearch" placeholder="Cerca dipendente…" oninput="filterEmployees(this.value)" autocomplete="off">
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <select id="empBranchFilter" class="sel" style="flex:1;font-size:.8rem;padding:5px 8px" onchange="filterEmployees()">
+                <option value="">Tutte le filiali</option>
+              </select>
+              <select id="empStatusFilter" class="sel" style="flex:1;font-size:.8rem;padding:5px 8px" onchange="filterEmployees()">
+                <option value="">Tutti</option>
+                <option value="active">Attivi</option>
+                <option value="inactive">Inattivi</option>
+              </select>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span id="empCount" class="text-sm text-muted">—</span>
+              <button class="btn btn-primary btn-sm" onclick="openNewEmployee()">+ Nuovo</button>
+            </div>
           </div>
-        </div>
-        <div class="card card-pad" style="max-width:900px">
-          <p class="text-muted text-sm" style="margin-bottom:12px">Il modulo dipendenti completo è disponibile nella pagina dedicata.</p>
-          <a class="btn btn-primary" href="employees.html" target="_blank">Apri modulo dipendenti ↗</a>
+          <div class="people-sidebar-body emp-list" id="empList">
+            <div style="padding:20px" class="skel" style="height:40px;border-radius:8px;margin:8px"></div>
+          </div>
+        </aside>
+
+        <!-- Profile panel -->
+        <div class="people-profile-panel" id="profilePanel">
+          <div class="people-no-selection" id="noSelection">
+            <div style="font-size:3rem">👥</div>
+            <h3>Seleziona un dipendente</h3>
+            <p class="text-sm">Clicca sulla lista a sinistra per vedere il profilo completo</p>
+          </div>
+          <div id="profileContent" style="display:none"></div>
         </div>
       </div>
 
       <!-- ══ REPORTS ═════════════════════════ -->
       <div class="spa-section page-scroll" id="sec-reports" style="padding:22px 24px">
-        <div class="page-head"><div class="page-title">📈 Report &amp; Analytics</div></div>
+        <div class="page-head"><div class="page-title">📈 Analytics</div></div>
         <div class="charts-grid">
           <div class="chart-card" style="grid-column:span 2">
             <div class="chart-title">Presenze ultimi 30 giorni</div>
@@ -712,7 +758,7 @@ const DOWFULL=["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì
 function dowFull(m,d){const[y,mo]=m.split("-").map(Number);return DOWFULL[new Date(y,mo-1,d).getDay()];}
 
 /* ---------- UI ---------- */
-function setView(v){if((v==="appr"||v==="data"||v==="cfg"||v==="an"||v==="log")&&!isAdmin()){toast("Sezione riservata all'Admin");return;}document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));document.querySelectorAll(".view,.sch-view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));({plan:renderGrid,cov:renderCov,das:renderDas,contr:renderContr,appr:renderAppr,cfg:renderCfg,an:renderAnalysis,log:renderLog,leg:renderLeg}[v]||(()=>{}))();if(v==="data"){document.getElementById("apiUrl").value=localStorage.getItem("turniDSP_api")||"";document.getElementById("autoGenChk").checked=!!CFG().autoGen;}}
+function setView(v){if((v==="appr"||v==="data"||v==="cfg"||v==="an"||v==="log")&&!isAdmin()){toast("Sezione riservata all'Admin");return;}document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));({plan:renderGrid,cov:renderCov,das:renderDas,contr:renderContr,appr:renderAppr,cfg:renderCfg,an:renderAnalysis,log:renderLog,leg:renderLeg}[v]||(()=>{}))();if(v==="data"){document.getElementById("apiUrl").value=localStorage.getItem("turniDSP_api")||"";document.getElementById("autoGenChk").checked=!!CFG().autoGen;}}
 function shiftMonth(n){let[y,m]=YM.split("-").map(Number);m+=n;if(m<1){m=12;y--}if(m>12){m=1;y++}YM=y+"-"+String(m).padStart(2,"0");weekIdx=0;loadMonth();refreshAll();}
 function setPlanMode(m){planMode=m;document.querySelectorAll("#planModeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.pm===m));renderGrid();}
 function refreshFilSelects(){
@@ -1099,6 +1145,11 @@ function apiUrl(){const u=document.getElementById("apiUrl").value.trim();if(u)lo
 /* ---------- util ---------- */
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
 function closeAll(){document.querySelectorAll(".overlay").forEach(o=>o.classList.remove("on"));}
+// toast(message, severity) — severity is optional: 'ok' | 'warn' | 'bad' (default: neutral)
+// Fixed regression: previously targeted a single static #toast element that
+// doesn't exist in this DOM (only #toast-container does), so every call
+// silently threw and did nothing. Now creates one toast per call and queues
+// it into #toast-container, matching platform.css's .toast/.toast.ok/.warn/.bad.
 function toast(m, severity) {
   var container = document.getElementById('toast-container');
   if (!container) return;
@@ -1165,12 +1216,13 @@ document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{
 var _currentSection   = 'scheduler';
 var _workspaceInited  = false;
 var _reportsInited    = false;
+var _employeesInited  = false;
 
 var SECTION_TITLES = {
   scheduler: 'Workspace',
-  employees: 'Dipendenti',
-  reports:   'Report & Analytics',
-  settings:  'Impostazioni',
+  employees: 'People',
+  reports:   'Analytics',
+  settings:  'Settings',
 };
 
 function navigate(section, opts) {
@@ -1220,6 +1272,14 @@ function navigate(section, opts) {
       if (fs) fs.value = opts.filterStatus;
     }
     refreshAll();
+
+  } else if (section === 'employees') {
+    workspaceHeader.style.display = 'none';
+    schedSubnav.style.display     = 'none';
+    if (!_employeesInited) {
+      _employeesInited = true;
+      bootPeople();
+    }
 
   } else if (section === 'reports') {
     workspaceHeader.style.display = 'none';
@@ -1705,6 +1765,7 @@ async function refreshOverview() {
     renderExpiryCard(_kpiData);
     renderAttendanceCard(_kpiData);
     renderDSP(_kpiData);
+    renderCharts();
   } catch(e) { toast('Errore KPI: '+e.message,'bad'); console.error(e); }
 
   loadAlerts();
@@ -2162,6 +2223,246 @@ document.addEventListener('click',function(e){
   if(document.getElementById('searchDropdown').style.display!=='none'&&!e.target.closest('.ph-search')) document.getElementById('searchDropdown').style.display='none';
 });
 
+// ── People module (ported from employees.html) ─────────────────────
+let _employees = [], _selectedEmpId = null;
+
+function empInitials(r) { return ((r.last_name||'')[0]||(r.first_name||'')[0]||'?').toUpperCase() + ((r.first_name||'')[0]||'').toUpperCase(); }
+function empContractStatus(r) {
+  if (!r.contract_end_date) return { cls:'badge-muted', label:'Indeterminato' };
+  const days = Math.ceil((new Date(r.contract_end_date)-new Date())/86400000);
+  if (days < 0) return { cls:'badge-bad', label:'Scaduto' };
+  if (days <= 7) return { cls:'badge-bad', label:days+'gg' };
+  if (days <= 30) return { cls:'badge-warn', label:days+'gg' };
+  return { cls:'badge-ok', label:fmt(r.contract_end_date) };
+}
+
+async function bootPeople() {
+  try {
+    const branches = await TurniApi.branches();
+    const sel = document.getElementById('empBranchFilter');
+    branches.forEach(b => { const o=document.createElement('option'); o.value=b.code; o.textContent=b.code; sel.appendChild(o); });
+  } catch {}
+  await loadEmployees();
+  // Deep-link: #employees/123 opens that profile directly
+  const hashParts = location.hash.replace('#','').split('/');
+  if (hashParts[0] === 'employees' && hashParts[1]) {
+    const id = +hashParts[1];
+    if (id) openProfile(id);
+  }
+}
+
+async function loadEmployees() {
+  try {
+    const data = await TurniApi.employees({ pageSize: 500 });
+    _employees = data.rows || data;
+    filterEmployees();
+  } catch (e) {
+    document.getElementById('empList').innerHTML = `<div style="padding:16px;color:var(--bad)">${esc(e.message)}</div>`;
+  }
+}
+
+function filterEmployees(q) {
+  if (q === undefined) q = document.getElementById('empSearch').value;
+  const branch = document.getElementById('empBranchFilter').value;
+  const status = document.getElementById('empStatusFilter').value;
+  q = (q||'').toLowerCase();
+
+  let rows = _employees;
+  if (branch) rows = rows.filter(r => r.branch_code === branch);
+  if (status) rows = rows.filter(r => r.status === status);
+  if (q) rows = rows.filter(r =>
+    (r.last_name+' '+r.first_name).toLowerCase().includes(q) ||
+    (r.transporter_id||'').toLowerCase().includes(q) ||
+    (r.employee_code||'').toLowerCase().includes(q)
+  );
+
+  document.getElementById('empCount').textContent = rows.length + ' dipendenti';
+  const list = document.getElementById('empList');
+  if (!rows.length) { list.innerHTML = '<div style="padding:20px;text-align:center" class="text-muted text-sm">Nessun risultato</div>'; return; }
+
+  list.innerHTML = rows.map(r => {
+    const cs = empContractStatus(r);
+    return `<div class="emp-row${r.id===_selectedEmpId?' selected':''}" onclick="openProfile(${r.id})">
+      <div class="emp-avatar${r.status==='inactive'?' inactive':''}">${esc(empInitials(r))}</div>
+      <div style="flex:1;min-width:0">
+        <div class="emp-name">${esc(r.last_name)} ${esc(r.first_name)}</div>
+        <div class="emp-meta">${esc(r.branch_code||'—')} · ${esc(r.service_name||'—')}</div>
+      </div>
+      <span class="badge ${cs.cls}" style="font-size:.65rem">${cs.label}</span>
+    </div>`;
+  }).join('');
+}
+
+async function openProfile(id) {
+  _selectedEmpId = id;
+  if (_currentSection === 'employees') { try { history.replaceState({section:'employees'}, '', '#employees/'+id); } catch(e) {} }
+  filterEmployees(); // update selected state
+
+  const panel = document.getElementById('profileContent');
+  const noSel = document.getElementById('noSelection');
+  noSel.style.display = 'none';
+  panel.style.display = 'block';
+  panel.innerHTML = `<div style="padding:40px;text-align:center" class="text-muted">Caricamento…</div>`;
+
+  try {
+    const emp = await TurniApi.employeeProfile(id);
+    renderEmpProfile(emp);
+  } catch (e) {
+    panel.innerHTML = `<div style="padding:20px;color:var(--bad)">Errore: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderEmpProfile(emp) {
+  const cs = empContractStatus(emp);
+  const panel = document.getElementById('profileContent');
+
+  panel.innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-avatar">${esc(empInitials(emp))}</div>
+      <div>
+        <h1>${esc(emp.last_name)} ${esc(emp.first_name)}</h1>
+        <p>${esc(emp.branch_name||emp.branch_code||'—')} · ${esc(emp.service_type_name||'—')} · ${esc(emp.contract_label||'—')}</p>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span class="badge ${emp.status==='active'?'badge-ok':'badge-muted'}">${emp.status==='active'?'Attivo':'Inattivo'}</span>
+          <span class="badge ${cs.cls}">${cs.label}</span>
+          ${emp.open_disciplinary > 0 ? `<span class="badge badge-bad">⚠ ${emp.open_disciplinary} disciplinare</span>` : ''}
+          ${emp.absences_today > 0 ? `<span class="badge badge-warn">Assente oggi</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-tabs">
+      <button class="profile-tab on" onclick="switchEmpTab('overview')">Panoramica</button>
+      <button class="profile-tab" onclick="switchEmpTab('schedule')">Turni recenti</button>
+      <button class="profile-tab" onclick="switchEmpTab('absences')">Assenze (${(emp.absences||[]).length})</button>
+      <button class="profile-tab" onclick="switchEmpTab('documents')">Documenti (${(emp.documents||[]).length})</button>
+      ${emp.open_disciplinary > 0 ? '<button class="profile-tab" onclick="switchEmpTab(\'disciplinary\')">Disciplinare</button>' : ''}
+    </div>
+
+    <div id="tab-overview" class="tab-content on">
+      <div class="info-grid">
+        <div class="info-item"><label>Codice dipendente</label><span>${esc(emp.employee_code||'—')}</span></div>
+        <div class="info-item"><label>Transporter ID</label><span>${esc(emp.transporter_id||'—')}</span></div>
+        <div class="info-item"><label>Email</label><span>${emp.email?`<a href="mailto:${esc(emp.email)}">${esc(emp.email)}</a>`:'—'}</span></div>
+        <div class="info-item"><label>Telefono</label><span>${esc(emp.phone||'—')}</span></div>
+        <div class="info-item"><label>Filiale</label><span>${esc(emp.branch_name||emp.branch_code||'—')}</span></div>
+        <div class="info-item"><label>Team</label><span>${esc(emp.team_name||'—')}</span></div>
+        <div class="info-item"><label>Servizio</label><span>${esc(emp.service_type_name||'—')}</span></div>
+        <div class="info-item"><label>Contratto</label><span>${esc(emp.contract_label||'—')}</span></div>
+        <div class="info-item"><label>Ore/settimana</label><span>${emp.weekly_hours||'—'}</span></div>
+        <div class="info-item"><label>Data assunzione</label><span>${fmt(emp.hire_date)}</span></div>
+        <div class="info-item"><label>Inizio contratto</label><span>${fmt(emp.contract_start_date)}</span></div>
+        <div class="info-item"><label>Fine contratto</label><span class="${cs.cls}">${fmt(emp.contract_end_date)||'Indeterminato'}</span></div>
+        ${emp.tenure_months ? `<div class="info-item"><label>Anzianità</label><span>${Math.floor(emp.tenure_months/12)} anni ${emp.tenure_months%12} mesi</span></div>` : ''}
+        <div class="info-item"><label>Codice turno default</label><span>${esc(emp.default_shift_code||'—')}</span></div>
+        ${emp.nationality ? `<div class="info-item"><label>Nazionalità</label><span>${esc(emp.nationality)}</span></div>` : ''}
+        ${emp.tax_code ? `<div class="info-item"><label>Codice fiscale</label><span>${esc(emp.tax_code)}</span></div>` : ''}
+      </div>
+      ${(emp.emergency_name||emp.emergency_phone) ? `
+        <div class="card card-pad" style="margin-bottom:14px">
+          <div class="section-title text-sm mb-2">🆘 Contatto emergenza</div>
+          <div>${esc(emp.emergency_name||'—')} · ${esc(emp.emergency_phone||'—')}</div>
+        </div>` : ''}
+      ${emp.notes ? `<div class="card card-pad"><div class="section-title text-sm mb-2">📝 Note</div><div class="text-sm">${esc(emp.notes)}</div></div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        ${USER.role==='admin'||USER.role==='hr_manager'?`<button class="btn btn-primary btn-sm" onclick="editEmployee(${emp.id})">✏️ Modifica</button>`:''}
+        ${USER.role==='admin'?`<button class="btn btn-ghost btn-sm" onclick="toggleEmpStatus(${emp.id},'${emp.status==='active'?'inactive':'active'}')">${emp.status==='active'?'Disattiva':'Attiva'}</button>`:''}
+      </div>
+    </div>
+
+    <div id="tab-schedule" class="tab-content">
+      <div class="text-sm text-muted mb-2">Ultimi 60 giorni di turni</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${(emp.recent_schedules||[]).map(s=>{
+          const d=new Date(s.work_date);
+          const dateStr=d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'});
+          return `<div title="${dateStr}: ${esc(s.shift_code)}" style="text-align:center">
+            <div class="text-xs text-muted" style="margin-bottom:2px">${dateStr}</div>
+            <div class="shift-mini" style="background:var(--brand-lt);color:var(--brand)">${esc(s.shift_code)}</div>
+          </div>`;
+        }).join('')||'<div class="text-muted text-sm">Nessun turno registrato</div>'}
+      </div>
+    </div>
+
+    <div id="tab-absences" class="tab-content">
+      ${(emp.absences||[]).length === 0 ? '<div class="text-muted text-sm">Nessuna assenza registrata</div>' :
+        (emp.absences||[]).map(a=>`
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--warn)"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+                <span class="font-semi text-sm">${esc(a.absence_type)}</span>
+                <span class="text-xs text-muted">${fmt(a.start_date)} → ${fmt(a.end_date)}</span>
+              </div>
+              ${a.note ? `<div class="text-sm text-muted">${esc(a.note)}</div>` : ''}
+            </div>
+          </div>`).join('')}
+    </div>
+
+    <div id="tab-documents" class="tab-content">
+      ${(emp.documents||[]).length === 0 ? '<div class="text-muted text-sm">Nessun documento caricato</div>' :
+        (emp.documents||[]).map(d=>{
+          const days = d.expiry_date ? Math.ceil((new Date(d.expiry_date)-new Date())/86400000) : null;
+          const statusCls = days===null?'badge-muted':days<0?'badge-bad':days<=30?'badge-warn':'badge-ok';
+          return `<div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--brand)"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="font-semi text-sm">${esc(d.doc_type)}</span>
+                ${d.number?`<span class="text-xs text-muted">#${esc(d.number)}</span>`:''}
+                ${d.expiry_date?`<span class="badge ${statusCls}" style="font-size:.65rem">${days<0?'Scaduto':days+'gg'}</span>`:''}
+              </div>
+              <div class="text-xs text-muted">Scadenza: ${fmt(d.expiry_date)} · Rilascio: ${fmt(d.issue_date)}</div>
+              ${d.file_path?`<a href="${esc(d.file_path)}?token=${encodeURIComponent(localStorage.getItem('turnidsp_token'))}" target="_blank" class="text-xs text-pri">📎 Visualizza</a>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+    </div>
+
+    <div id="tab-disciplinary" class="tab-content">
+      ${(emp.disciplinary||[]).map(d=>`
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:var(--bad)"></div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+              <span class="font-semi text-sm">${esc(d.action_type)}</span>
+              <span class="badge badge-${d.severity==='high'?'bad':d.severity==='medium'?'warn':'muted'}" style="font-size:.65rem">${esc(d.severity)}</span>
+              <span class="text-xs text-muted">${fmt(d.action_date)}</span>
+            </div>
+            ${d.description?`<div class="text-sm">${esc(d.description)}</div>`:''}
+          </div>
+        </div>`).join('')||'<div class="text-muted text-sm">Nessun provvedimento aperto</div>'}
+    </div>
+  `;
+}
+
+function switchEmpTab(name) {
+  document.querySelectorAll('.profile-tab').forEach(b => {
+    b.classList.toggle('on', b.getAttribute('onclick') && b.getAttribute('onclick').includes("'"+name+"'"));
+  });
+  document.querySelectorAll('.tab-content').forEach(el => {
+    el.classList.toggle('on', el.id === 'tab-' + name);
+  });
+}
+
+async function toggleEmpStatus(id, newStatus) {
+  try {
+    await TurniApi.setEmployeeStatus(id, newStatus);
+    await loadEmployees();
+    openProfile(id);
+    toast(newStatus==='active' ? 'Dipendente riattivato' : 'Dipendente disattivato');
+  } catch(e) { toast(e.message, 'bad'); }
+}
+
+function editEmployee(id) {
+  // TODO: open a modal or navigate to edit form
+  toast('Modifica dipendente #' + id + ': apre il pannello di editing');
+}
+
+function openNewEmployee() {
+  toast('Aggiungi nuovo dipendente da Workspace → Pianificazione → Anagrafica DAS, oppure usa Importa Excel');
+}
+
 // ── User management ───────────────────────────────────────────────
 async function loadUsers(){
   try{
@@ -2204,7 +2505,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Deep-link support. #dashboard is kept as a legacy alias that now
   // simply resolves to the scheduler workspace, since Dashboard lives
   // inside it as the overview strip rather than as its own route.
-  var hash = location.hash.replace('#','');
+  // #employees/123 (e.g. from the retired employees.html#123 bookmarks)
+  // opens the People section and, once loaded, that specific profile.
+  var hashParts = location.hash.replace('#','').split('/');
+  var hash = hashParts[0];
   if (hash === 'dashboard') hash = 'scheduler';
   var known = ['scheduler','employees','reports','settings'];
   navigate(known.includes(hash) ? hash : 'scheduler');

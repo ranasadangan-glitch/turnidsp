@@ -995,6 +995,10 @@ body.is-team  .teamonly   { display: inline-flex !important; }
   display: flex; align-items: center; gap: 8px;
   padding: 0 16px;
   overflow-x: auto; flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
 }
 .sch-toolbar::-webkit-scrollbar { display: none; }
 .t-divider { width: 1px; height: 20px; background: var(--border-strong); flex-shrink: 0; }

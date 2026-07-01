@@ -149,11 +149,11 @@
          ════════════════════════════════════ -->
     <div class="app-body">
 
-      <!-- ══ SCHEDULER WORKSPACE ═════════════
-           Dashboard is now the top section of this single workspace,
-           not a separate page. Everything below shares one scroll
-           container, one state, one header, one sidebar. ══════════ -->
-      <div class="spa-section active" id="sec-scheduler">
+      <!-- ══ WORKSPACE ══════════════════════
+           Single scrollable column: overview strip on top (KPIs, charts,
+           forecast, absences, alerts), then the scheduler board below.
+           page-scroll makes the whole section scroll as one document. -->
+      <div class="spa-section active page-scroll" id="sec-scheduler">
 
         <!-- ── Workspace overview strip: KPIs · Alerts · Activity ──
              Collapsible. Lives above the toolbar so it's always the
@@ -280,7 +280,7 @@
         </div>
 
         <!-- Scheduler view container -->
-        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div id="schedulerBoard" style="height:calc(100vh - var(--header-h) - var(--toolbar-h));min-height:500px;display:flex;flex-direction:column;flex-shrink:0">
           <!-- Planning board -->
           <div class="sch-view on" id="v-plan">
             <div class="adminonly" id="autoBanner" style="display:none;background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px 16px;font-size:.8rem"></div>
@@ -758,7 +758,13 @@ const DOWFULL=["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì
 function dowFull(m,d){const[y,mo]=m.split("-").map(Number);return DOWFULL[new Date(y,mo-1,d).getDay()];}
 
 /* ---------- UI ---------- */
-function setView(v){if((v==="appr"||v==="data"||v==="cfg"||v==="an"||v==="log")&&!isAdmin()){toast("Sezione riservata all'Admin");return;}document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));({plan:renderGrid,cov:renderCov,das:renderDas,contr:renderContr,appr:renderAppr,cfg:renderCfg,an:renderAnalysis,log:renderLog,leg:renderLeg}[v]||(()=>{}))();if(v==="data"){document.getElementById("apiUrl").value=localStorage.getItem("turniDSP_api")||"";document.getElementById("autoGenChk").checked=!!CFG().autoGen;}}
+function setView(v){
+  if((v==="appr"||v==="data"||v==="cfg"||v==="an"||v==="log")&&!isAdmin()){toast("Sezione riservata all'Admin");return;}
+  // Toggle both .view (legacy) and .sch-view (current app.html classes)
+  document.querySelectorAll(".view,.sch-view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));
+  ({plan:renderGrid,cov:renderCov,das:renderDas,contr:renderContr,appr:renderAppr,cfg:renderCfg,an:renderAnalysis,log:renderLog,leg:renderLeg}[v]||(()=>{}))();
+  if(v==="data"){document.getElementById("apiUrl").value=localStorage.getItem("turniDSP_api")||"";document.getElementById("autoGenChk").checked=!!CFG().autoGen;}
+}
 function shiftMonth(n){let[y,m]=YM.split("-").map(Number);m+=n;if(m<1){m=12;y--}if(m>12){m=1;y++}YM=y+"-"+String(m).padStart(2,"0");weekIdx=0;loadMonth();refreshAll();}
 function setPlanMode(m){planMode=m;document.querySelectorAll("#planModeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.pm===m));renderGrid();}
 function refreshFilSelects(){

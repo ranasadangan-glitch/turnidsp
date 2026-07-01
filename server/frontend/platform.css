@@ -1332,6 +1332,93 @@ table.grid tr.empty td { padding:24px;text-align:center;color:var(--text-muted);
 .mb-2  { margin-bottom: 8px; } .mb-4  { margin-bottom: 16px; }
 .divider { border: 0; border-top: 1px solid var(--border); margin: 14px 0; }
 
+/* ═════════════════════════════════════════════
+   PEOPLE MODULE — list + profile split layout
+   Ported from the standalone employees.html.
+   ═════════════════════════════════════════════ */
+.people-sidebar {
+  width: 300px; flex-shrink: 0; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.people-sidebar-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.people-sidebar-search {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border: 1.5px solid var(--border-strong); border-radius: 9px;
+  background: var(--surface-2);
+}
+.people-sidebar-search input { flex: 1; border: 0; background: none; font-size: .875rem; outline: none; color: var(--text-primary); }
+.people-sidebar-body { flex: 1; overflow-y: auto; }
+.people-profile-panel { flex: 1; overflow-y: auto; }
+.people-no-selection {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  color: var(--text-muted); padding: 40px;
+}
+
+.emp-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s;
+}
+.emp-row:hover { background: var(--surface-2); }
+.emp-row.selected { background: var(--brand-lt); }
+.emp-avatar {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  background: var(--brand); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .9rem; letter-spacing: -.02em;
+}
+.emp-avatar.inactive { background: var(--text-muted); opacity: .6; }
+.emp-name { font-weight: 600; font-size: .9rem; }
+.emp-meta { font-size: .75rem; color: var(--text-muted); }
+
+.profile-hero {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dk) 100%);
+  padding: 28px 28px 20px; color: #fff;
+  display: flex; align-items: flex-end; gap: 18px;
+}
+.profile-avatar {
+  width: 72px; height: 72px; border-radius: 18px;
+  background: rgba(255,255,255,.22); border: 3px solid rgba(255,255,255,.5);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; font-weight: 800; flex-shrink: 0;
+}
+.profile-hero h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; }
+.profile-hero p { font-size: .85rem; opacity: .85; }
+.profile-tabs {
+  display: flex; gap: 0; border-bottom: 1.5px solid var(--border);
+  background: var(--surface-1); padding: 0 20px; overflow-x: auto;
+}
+.profile-tab {
+  padding: 12px 16px; font-size: .85rem; font-weight: 600; color: var(--text-muted);
+  border-bottom: 2.5px solid transparent; cursor: pointer; white-space: nowrap;
+  background: none; border-top: 0; border-left: 0; border-right: 0;
+  transition: color .12s;
+}
+.profile-tab.on { color: var(--brand); border-bottom-color: var(--brand); }
+.tab-content { display: none; padding: 20px; }
+.tab-content.on { display: block; }
+.info-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+  gap: 14px; margin-bottom: 20px;
+}
+.info-item { display: flex; flex-direction: column; gap: 2px; }
+.info-item label { font-size: .7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.info-item span { font-size: .9rem; font-weight: 500; }
+.timeline-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.timeline-item:last-child { border-bottom: 0; }
+.timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); margin-top: 6px; flex-shrink: 0; }
+.shift-mini {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 28px; border-radius: 7px; font-size: .72rem; font-weight: 800;
+}
+@media (max-width: 700px) {
+  #sec-employees { flex-direction: column !important; }
+  .people-sidebar { width: 100%; border-right: 0; max-height: 45vh; }
+}
+
 /* ── Responsive ── */
 /* ── Workspace overview: 4-up alert/activity row ───────────────── */
 .overview-alert-row {
@@ -1353,8 +1440,5 @@ table.grid tr.empty td { padding:24px;text-align:center;color:var(--text-muted);
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .page-pad { padding: 14px; }
-<<<<<<< HEAD
   .overview-alert-row { grid-template-columns: 1fr; }
-=======
->>>>>>> 1ae7849a23ab5764c576ad6c149826e114dd96df
 }

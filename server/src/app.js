@@ -100,31 +100,15 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOS
 
 // ---- serve the frontend ----
 // The login page IS the index: '/' serves login.html directly. After
-// authentication, app.html (the unified Workspace shell — Dashboard +
-// Scheduler merged into one continuous view, plus People/Analytics/
-// Settings as sibling sections) is the app's single entry point.
-//
-// index.html, dashboard.html, scheduler.html, and employees.html are all
-// retired: each is now just a tiny redirect shim kept on disk so old
-// bookmarks/links land in app.html instead of 404ing. index/dashboard/
-// scheduler 301-redirect server-side since they carry no state worth
-// preserving. employees.html is deliberately NOT in that list — it's
-// still served as a real (tiny) file so its inline script can read
-// location.hash (e.g. "#123") and forward the visitor straight to that
-// employee's profile inside app.html's People section; a server-side 301
-// would happen before any hash could be read and the deep link would be
-// lost. New code should never link to any of these four pages directly.
+// authentication, index.html (the scheduler — the app's main entry point)
+// is reached; its guard sends you back to login if there is no token.
+// dashboard.html (KPIs, Team & Utenti, Audit, Report) is reachable from the
+// scheduler's "📊 Dashboard" link.
 const FRONT = path.resolve(__dirname, '../frontend');
-
-const LEGACY_REDIRECTS = ['/index.html', '/dashboard.html', '/scheduler.html'];
-LEGACY_REDIRECTS.forEach((route) => {
-  app.get(route, (_req, res) => res.redirect(301, '/app'));
-});
-
 app.use(express.static(FRONT, { index: false }));   // don't auto-serve index.html at '/'
 
 app.get('/', (_req, res) => res.sendFile(path.join(FRONT, 'login.html')));
-// The application shell — Workspace/People/Analytics/Settings all live here.
+// SPA entry point — replaces the old multi-page scheduler/dashboard split
 app.get('/app', (_req, res) => res.sendFile(path.join(FRONT, 'app.html')));
 
 // fallback: unknown non-API routes go to the login page
